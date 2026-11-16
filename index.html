@@ -1186,6 +1186,12 @@ if (typeof module !== "undefined" && module.exports) {
             Math.round(p.maxElDeg) + "° at " + fmtTime(p.maxElTime, CENTRAL) + " Central</strong>" +
             (p.los ? ", sets <strong>" + fmtTime(p.los, CENTRAL) + " Central</strong> in the " +
               compass(p.losAz) + "." : ", and still up at the end of the 24-hour window.") + "</p>";
+        } else if (p.los && (p.los.getTime() - p.aos.getTime()) < 120000) {
+          // Grazing pass under two minutes: rise, peak, and set all round
+          // to the same minute, so say so plainly instead of repeating it.
+          html += "<p>Briefly reaches <strong>" + Math.round(p.maxElDeg) + "° at " +
+            fmtTime(p.maxElTime, CENTRAL) + " Central</strong> in the " + compass(p.aosAz) +
+            " — a short, low pass.</p>";
         } else {
           html += "<p>Rises <strong>" + fmtTime(p.aos, CENTRAL) + " Central</strong> in the " +
             compass(p.aosAz) + ", highest <strong>" + Math.round(p.maxElDeg) + "° at " +
