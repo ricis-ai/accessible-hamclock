@@ -66,6 +66,17 @@
         min-height: 3.5rem;
       }
       .back-link:hover { background: #1f1f1f; }
+      button.back-link {
+        font: inherit;
+        cursor: pointer;
+        text-decoration: none;
+        width: 100%;
+      }
+      .close-note {
+        font-size: 1.2rem;
+        font-weight: bold;
+        margin: 0.5rem 0;
+      }
 
       .twin-note { font-size: 1.05rem; color: var(--muted); }
 
@@ -1387,14 +1398,53 @@ if (typeof module !== "undefined" && module.exports) {
   var refreshBtn = $("refresh-btn");
   if (refreshBtn) refreshBtn.addEventListener("click", function () { refreshAll(true); });
 
-  // ---- Back-to-group links ---------------------------------------------------
-  // Facebook's in-app browser cannot open facebook.com group pages at all:
-  // both the www and m addresses end at Facebook's "Page not found"
-  // (verified on Gregory's phone 2026-11-15, fresh load). The native app
-  // deep link fb://group/<id> is the route that works there. On mobile, try
-  // the deep link first and fall back to the plain web address if the app
-  // does not open; on desktop the web address works fine, so the link
-  // behaves normally. Without JavaScript the links are plain web addresses.
+  // ---- Close buttons in Facebook's in-app browser ---------------------------
+  // No link form reaches the group from inside Facebook's own browser: the
+  // www address, the mobile address, and the fb:// deep link were each
+  // tested fresh on Gregory's phone and each ended at "Page not found"
+  // (2026-11-15). So inside that browser the back-links become close
+  // buttons instead: window.close() if the browser honours it, and if the
+  // page is still open a second later, a plain instruction to use the X
+  // button at the top left, which returns to the Facebook app. Whether
+  // window.close() works in Facebook's webview is unproven — the button
+  // tells the member what to do either way. Outside that browser the
+  // back-links stay as they are.
+  var FB_WEBVIEW = /FBAN|FBAV|FB_IAB/i.test(navigator.userAgent);
+  if (FB_WEBVIEW) {
+    var backAnchors = document.querySelectorAll('a[href*="facebook.com/groups/742838019382868"]');
+    for (var bi = 0; bi < backAnchors.length; bi++) {
+      (function (anchor) {
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "back-link";
+        btn.textContent = "Close this page and return to Facebook";
+        var noteShown = false;
+        btn.addEventListener("click", function () {
+          window.close();
+          setTimeout(function () {
+            if (!document.hidden && !noteShown) {
+              noteShown = true;
+              var note = document.createElement("p");
+              note.className = "close-note";
+              note.setAttribute("role", "status");
+              note.textContent = "This browser won't let the page close itself. To go back to Facebook, tap the X button at the top left of the screen.";
+              btn.parentNode.insertBefore(note, btn.nextSibling);
+            }
+          }, 1200);
+        });
+        anchor.parentNode.replaceChild(btn, anchor);
+      })(backAnchors[bi]);
+    }
+  }
+
+  // ---- Back-to-group links (other mobile browsers) ---------------------------
+  // Inside Facebook's own browser the links above are replaced by close
+  // buttons (see the block above), because every link form fails there.
+  // In other mobile browsers (Safari, Chrome), try the native app deep link
+  // fb://group/<id> first — it opens the group in the Facebook app — and
+  // fall back to the plain web address if the app does not open. On desktop
+  // the web address works fine, so the link behaves normally. Without
+  // JavaScript the links are plain web addresses.
   var GROUP_DEEP_LINK = "fb://group/742838019382868";
   var isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   if (isMobile) {
