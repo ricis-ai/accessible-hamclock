@@ -4,10 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="color-scheme" content="dark" />
-    <!-- Empty inline icon: stops the browser fetching /favicon.ico, which
-         lives outside the artifact's routes and 404s. -->
     <link rel="icon" href="data:," />
-    <title>Accessible HamClock — Proof of Concept</title>
+    <title>Accessible HamClock — Visually Inconvenienced Hams</title>
     <style>
       :root {
         --bg: #000000;
@@ -18,6 +16,7 @@
         --focus: #ffff00;
         --panel: #0d0d0d;
         --border: #ffffff;
+        --muted: #cccccc;
       }
       * { box-sizing: border-box; }
       html { font-size: 20px; }
@@ -29,7 +28,7 @@
         line-height: 1.5;
         padding: 1rem;
       }
-      .wrap { max-width: 44rem; margin: 0 auto; }
+      .wrap { max-width: 46rem; margin: 0 auto; }
 
       .skip-link {
         position: absolute;
@@ -49,24 +48,9 @@
         outline-offset: 3px;
       }
 
-      h1 {
-        font-size: 2rem;
-        line-height: 1.2;
-        margin: 0.5rem 0 0.25rem;
-      }
-      h2 {
-        font-size: 1.5rem;
-        margin: 1.75rem 0 0.5rem;
-      }
+      h1 { font-size: 2rem; line-height: 1.2; margin: 0.5rem 0 0.25rem; }
+      h2 { font-size: 1.5rem; margin: 1.75rem 0 0.5rem; }
       p { margin: 0.5rem 0; }
-
-      .poc-note {
-        border: 3px solid var(--fair);
-        padding: 0.75rem 1rem;
-        font-size: 1.1rem;
-        font-weight: bold;
-        margin: 1rem 0;
-      }
 
       .back-link {
         display: block;
@@ -83,30 +67,24 @@
       }
       .back-link:hover { background: #1f1f1f; }
 
-      .reading {
+      .twin-note { font-size: 1.05rem; color: var(--muted); }
+
+      .clocks {
         border: 3px solid var(--border);
         background: var(--panel);
         padding: 1rem 1.25rem;
         margin: 0.75rem 0;
       }
-      .k-value {
-        font-size: 4.5rem;
-        font-weight: bold;
-        line-height: 1.1;
-        margin: 0.25rem 0;
-        color: var(--good);
+      .clock-line { font-size: 1.6rem; font-weight: bold; margin: 0.25rem 0; }
+      .clock-line .label { font-size: 1.1rem; font-weight: normal; color: var(--muted); }
+
+      .summary {
+        border: 3px solid var(--good);
+        background: var(--panel);
+        padding: 1rem 1.25rem;
+        margin: 0.75rem 0;
+        font-size: 1.2rem;
       }
-      .k-value.fair { color: var(--fair); }
-      .k-value.poor { color: var(--poor); }
-      .k-value.unknown { color: var(--text); font-size: 2.25rem; }
-      .k-label {
-        font-size: 1.35rem;
-        font-weight: bold;
-        margin: 0.25rem 0;
-      }
-      .k-detail { font-size: 1.1rem; }
-      .as-of { font-size: 1.15rem; }
-      .as-of strong { color: var(--good); }
 
       button.refresh {
         display: block;
@@ -131,341 +109,1223 @@
         min-height: 1.8em;
         margin: 0.5rem 0;
       }
-      .source { font-size: 1rem; margin-top: 1.5rem; }
 
-      .diag {
-        border: 3px solid var(--fair);
-        background: var(--panel);
-        padding: 1rem 1.25rem;
-        margin: 0.75rem 0;
-      }
-      .diag-list {
-        list-style: none;
-        margin: 0;
-        padding: 0;
-        font-size: 1.05rem;
-        overflow-wrap: anywhere;
-      }
-      .diag-list li {
-        padding: 0.45rem 0;
-        border-bottom: 1px solid #444;
-      }
-      .diag-list li:last-child { border-bottom: none; }
-      .diag-list .ok { color: var(--good); font-weight: bold; }
-      .diag-list .bad { color: var(--poor); font-weight: bold; }
-      .diag-list .info { color: var(--fair); font-weight: bold; }
-      .diag-log {
-        font-size: 1rem;
-        white-space: pre-wrap;
-        overflow-wrap: anywhere;
-        margin: 0.5rem 0 0;
-        max-height: 24rem;
-        overflow-y: auto;
-      }
+      .asof { font-size: 1rem; color: var(--muted); }
+
+      .num-list, .data-list { list-style: none; margin: 0.5rem 0; padding: 0; font-size: 1.15rem; }
+      .num-list li, .data-list li { padding: 0.45rem 0; border-bottom: 1px solid #444; }
+      .num-list li:last-child, .data-list li:last-child { border-bottom: none; }
+
+      .good { color: var(--good); font-weight: bold; }
+      .fair { color: var(--fair); font-weight: bold; }
+      .poor { color: var(--poor); font-weight: bold; }
+      .notrep { color: var(--text); }
+
+      .band-table { width: 100%; border-collapse: collapse; font-size: 1.15rem; margin: 0.5rem 0; }
+      .band-table th, .band-table td { border: 1px solid #888; padding: 0.6rem 0.75rem; text-align: left; }
+      .band-table th { background: var(--panel); }
+
+      .spot-list { list-style: none; margin: 0.5rem 0; padding: 0; font-size: 1.1rem; }
+      .spot-list li { padding: 0.6rem 0; border-bottom: 1px solid #444; }
+      .spot-list li:last-child { border-bottom: none; }
+      .spot-call { font-weight: bold; font-size: 1.25rem; }
+      .spot-meta { color: var(--muted); font-size: 1rem; }
+
+      .sat-block { border: 3px solid var(--border); background: var(--panel); padding: 1rem 1.25rem; margin: 0.75rem 0; }
+      .sat-block h3 { font-size: 1.3rem; margin: 0 0 0.5rem; }
+
+      .about { font-size: 1.05rem; color: var(--muted); margin-top: 2rem; border-top: 1px solid #444; padding-top: 1rem; }
     </style>
   </head>
   <body>
-    <a class="skip-link" href="#k-reading">Skip to the K index reading</a>
+    <a class="skip-link" href="#summary">Skip to the conditions summary</a>
     <main class="wrap">
       <h1>Accessible HamClock</h1>
 
       <a class="back-link" href="https://www.facebook.com/groups/742838019382868">Back to Visually Inconvenienced Hams on Facebook</a>
+      <p class="twin-note">The same core numbers are in the group itself, in the hourly conditions post in the Propagation guide. This page is the live companion: it fetches fresh data in your browser whenever you open it or press refresh. No member ever has to leave the group to get the core information.</p>
 
-      <p class="poc-note">Proof of concept test page — instrumented build. This is not the finished HamClock. It tests one thing: whether this page, opened from a published link, can fetch live space-weather data in your browser. Every fetch step and the exact wording of any error are recorded in the Fetch diagnostics section below, so a failure can be read off the page instead of guessed at.</p>
-
-      <h2 id="k-reading">Planetary K index</h2>
-
-      <div class="reading" aria-labelledby="k-reading">
-        <p class="k-value unknown" id="k-value">Loading…</p>
-        <p class="k-label" id="k-label"></p>
-        <p class="k-detail" id="k-detail"></p>
-        <p class="as-of" id="as-of">Data as of: waiting for the first reading.</p>
+      <h2 id="time-heading">Time</h2>
+      <div class="clocks" aria-labelledby="time-heading">
+        <p class="clock-line"><span class="label">Central time: </span><span id="clock-central">Loading…</span></p>
+        <p class="clock-line"><span class="label">UTC: </span><span id="clock-utc">Loading…</span></p>
+        <p class="asof" id="date-line">Loading…</p>
       </div>
 
-      <button type="button" class="refresh" id="refresh-btn">Refresh K index now</button>
-      <p class="status" id="status" role="status" aria-live="polite">Loading the latest K index…</p>
-
-      <p>The K index measures geomagnetic activity. 0 to 3 is quiet, 4 is unsettled, 5 and above is storm conditions, which usually means poor HF propagation.</p>
-
-      <h2 id="diag-heading">Fetch diagnostics</h2>
-      <p>One line per check, newest result at the top of the log. If the K index fails to load, read this section aloud or copy it — it says exactly which step failed and the browser's own error wording.</p>
-      <div class="diag" aria-labelledby="diag-heading">
-        <ul class="diag-list">
-          <li>Page origin: <span id="diag-origin">checking…</span></li>
-          <li>Browser online: <span id="diag-online">checking…</span></li>
-          <li>Attempt 1 — fetch(): <span id="diag-fetch">not run yet</span></li>
-          <li>Attempt 2 — XMLHttpRequest: <span id="diag-xhr">not run yet</span></li>
-          <li>Last error, exact wording: <span id="diag-error">none yet</span></li>
-        </ul>
-        <p class="diag-log" id="diag-log" role="log" aria-live="polite" aria-label="Fetch diagnostics log"></p>
+      <h2 id="summary">Conditions summary</h2>
+      <div class="summary" aria-labelledby="summary">
+        <p id="summary-text">Loading the latest conditions…</p>
       </div>
 
-      <p class="source">Source: NOAA Space Weather Prediction Center, planetary K index 1-minute feed —
-        <a href="https://services.swpc.noaa.gov/json/planetary_k_index_1m.json">services.swpc.noaa.gov</a>.
-        Times on this page are 24-hour. The “data as of” time comes from the feed itself, not from your device clock.</p>
+      <button type="button" class="refresh" id="refresh-btn">Refresh all data now</button>
+      <p class="status" id="status" role="status" aria-live="polite">Loading the latest data…</p>
+
+      <h2 id="numbers-heading">Solar numbers</h2>
+      <p class="asof" id="numbers-asof">Loading…</p>
+      <ul class="num-list" aria-labelledby="numbers-heading">
+        <li id="num-k">K index: Loading…</li>
+        <li id="num-flux">Solar flux: Loading…</li>
+        <li id="num-a">A index: Loading…</li>
+        <li id="num-flare">Flare class: Loading…</li>
+        <li id="num-wind">Solar wind: Loading…</li>
+        <li id="num-bz">Bz: Loading…</li>
+        <li id="num-ssn-monthly">Sunspot number, monthly average: Loading…</li>
+        <li id="num-ssn-daily">Daily sunspot number: not reported on this page. The daily number is in the group&rsquo;s hourly conditions post.</li>
+        <li id="num-noise">Signal noise: not reported on this page. The S-level is in the group&rsquo;s hourly conditions post.</li>
+        <li id="num-muf">MUF: not reported on this page. The MUF is in the group&rsquo;s hourly conditions post, when it is reported there.</li>
+      </ul>
+
+      <h2 id="bands-heading">Band conditions, day and night</h2>
+      <p>Estimated from solar flux and K index, using the same calibration as the group&rsquo;s hourly post.</p>
+      <p class="asof" id="bands-asof">Loading…</p>
+      <table class="band-table" aria-labelledby="bands-heading">
+        <thead><tr><th scope="col">Band</th><th scope="col">Day</th><th scope="col">Night</th></tr></thead>
+        <tbody id="band-rows"><tr><td colspan="3">Loading…</td></tr></tbody>
+      </table>
+
+      <h2 id="gray-heading">Gray line</h2>
+      <p class="asof">Sunrise and sunset for Tinley Park, Illinois, home of the group&rsquo;s net. Times are Central.</p>
+      <ul class="num-list" aria-labelledby="gray-heading">
+        <li id="gray-sun">Sunrise and sunset: Loading…</li>
+        <li id="gray-subsolar">Subsolar point: Loading…</li>
+        <li id="gray-terminator">Day-night line: Loading…</li>
+        <li id="gray-paths">Gray-line paths: Loading…</li>
+      </ul>
+
+      <h2 id="sat-heading">Satellite passes</h2>
+      <p>Next pass over Tinley Park, Illinois, for each satellite, from CelesTrak elements. A pass counts when the satellite rises at least 10 degrees above the horizon. Times are Central.</p>
+      <p class="asof" id="sat-asof">Loading…</p>
+      <div id="sat-list"><p>Loading…</p></div>
+
+      <h2 id="dx-heading">Latest DX spots</h2>
+      <p>From the DX Summit cluster. Each spot carries its own time, so you can judge how fresh it is. Times are Central.</p>
+      <p class="asof" id="dx-asof">Loading…</p>
+      <ul class="spot-list" id="dx-list" aria-labelledby="dx-heading"><li>Loading…</li></ul>
+
+      <h2 id="pota-heading">Latest POTA spots</h2>
+      <p>From Parks on the Air. Each spot carries its own time. Times are Central.</p>
+      <p class="asof" id="pota-asof">Loading…</p>
+      <ul class="spot-list" id="pota-list" aria-labelledby="pota-heading"><li>Loading…</li></ul>
+
+      <h2 id="outlook-heading">Outlook</h2>
+      <ul class="num-list" aria-labelledby="outlook-heading">
+        <li id="outlook-past">Past 24 hours: Loading…</li>
+        <li id="outlook-next">Next 24 hours: Loading…</li>
+      </ul>
+
+      <h2 id="status-heading">Data status</h2>
+      <p>One line per feed. A feed that fails reads as not reported, never as an old number.</p>
+      <ul class="data-list" id="feed-status" aria-labelledby="status-heading"><li>Loading…</li></ul>
+
+      <div class="about">
+        <h2 id="about-heading">About this page</h2>
+        <p>This page is a fresh build by Visually Inconvenienced Hams, inspired by HamClock, the shack clock created by Elwood Downey, WB0OEW, who became a silent key on 29 January 2026. It uses no HamClock code. Live data is fetched in your browser from NOAA&rsquo;s Space Weather Prediction Center, the DX Summit cluster, Parks on the Air, and CelesTrak. Nothing you do here is sent anywhere except those feed requests.</p>
+        <p><a href="https://www.facebook.com/groups/742838019382868">Back to Visually Inconvenienced Hams on Facebook</a></p>
+      </div>
     </main>
+<script>
+/*!
+ * satellite-js v4.1.4
+ * (c) 2013 Shashwat Kandadai and UCSC
+ * https://github.com/shashwatak/satellite-js
+ * License: MIT
+ */
 
-    <script>
-      (function () {
-        var FEED_URL = "https://services.swpc.noaa.gov/json/planetary_k_index_1m.json";
-        var valueEl = document.getElementById("k-value");
-        var labelEl = document.getElementById("k-label");
-        var detailEl = document.getElementById("k-detail");
-        var asOfEl = document.getElementById("as-of");
-        var statusEl = document.getElementById("status");
-        var btn = document.getElementById("refresh-btn");
-        var diagOriginEl = document.getElementById("diag-origin");
-        var diagOnlineEl = document.getElementById("diag-online");
-        var diagFetchEl = document.getElementById("diag-fetch");
-        var diagXhrEl = document.getElementById("diag-xhr");
-        var diagErrorEl = document.getElementById("diag-error");
-        var diagLogEl = document.getElementById("diag-log");
+!function(o,t){"object"==typeof exports&&"undefined"!=typeof module?module.exports=t():"function"==typeof define&&define.amd?define(t):(o="undefined"!=typeof globalThis?globalThis:o||self).satellite=t()}(this,(function(){"use strict";var o=Math.PI,t=2*o,e=o/180,s=180/o,n=1440,a=398600.5,d=6378.137,r=60/Math.sqrt(650944.0944816993),i=d*r/60,c=1/r,h=.00108262998905,m=-253215306e-14,l=-161098761e-14,p=m/h,x=2/3;function g(o,t){for(var e=[31,o%4==0?29:28,31,30,31,30,31,31,30,31,30,31],s=Math.floor(t),n=1,a=0;s>a+e[n-1]&&n<12;)a+=e[n-1],n+=1;var d=n,r=s-a,i=24*(t-s),c=Math.floor(i);i=60*(i-c);var h=Math.floor(i);return{mon:d,day:r,hr:c,minute:h,sec:60*(i-h)}}function M(o,t,e,s,n,a){var d=arguments.length>6&&void 0!==arguments[6]?arguments[6]:0;return 367*o-Math.floor(7*(o+Math.floor((t+9)/12))*.25)+Math.floor(275*t/9)+e+1721013.5+((d/6e4+a/60+n)/60+s)/24}function f(o,t,e,s,n,a,d){if(o instanceof Date){var r=o;return M(r.getUTCFullYear(),r.getUTCMonth()+1,r.getUTCDate(),r.getUTCHours(),r.getUTCMinutes(),r.getUTCSeconds(),r.getUTCMilliseconds())}return M(o,t,e,s,n,a,d)}function u(e,s){var n,a,d,r,i,c,h,m,l,p,x,g,M,f,u,z,v,y,b=e.e3,q=e.ee2,w=e.peo,T=e.pgho,j=e.pho,E=e.pinco,F=e.plo,A=e.se2,C=e.se3,L=e.sgh2,S=e.sgh3,U=e.sgh4,D=e.sh2,I=e.sh3,R=e.si2,O=e.si3,_=e.sl2,k=e.sl3,P=e.sl4,Z=e.t,G=e.xgh2,H=e.xgh3,Y=e.xgh4,$=e.xh2,B=e.xh3,J=e.xi2,K=e.xi3,N=e.xl2,Q=e.xl3,V=e.xl4,W=e.zmol,X=e.zmos,oo=s.init,to=s.opsmode,eo=s.ep,so=s.inclp,no=s.nodep,ao=s.argpp,ro=s.mp;y=X+119459e-10*Z,"y"===oo&&(y=X),v=y+.0335*Math.sin(y);var io=A*(h=.5*(f=Math.sin(v))*f-.25)+C*(m=-.5*f*Math.cos(v)),co=R*h+O*m,ho=_*h+k*m+P*f,mo=L*h+S*m+U*f,lo=D*h+I*m;return y=W+.00015835218*Z,"y"===oo&&(y=W),v=y+.1098*Math.sin(y),l=io+(q*(h=.5*(f=Math.sin(v))*f-.25)+b*(m=-.5*f*Math.cos(v))),g=co+(J*h+K*m),M=ho+(N*h+Q*m+V*f),p=mo+(G*h+H*m+Y*f),x=lo+($*h+B*m),"n"===oo&&(M-=F,p-=T,x-=j,so+=g-=E,eo+=l-=w,r=Math.sin(so),d=Math.cos(so),so>=.2?(ao+=p-=d*(x/=r),no+=x,ro+=M):(n=r*(c=Math.sin(no)),a=r*(i=Math.cos(no)),n+=x*i+g*d*c,a+=-x*c+g*d*i,(no%=t)<0&&"a"===to&&(no+=t),u=ro+ao+d*no,u+=M+p-g*no*r,z=no,(no=Math.atan2(n,a))<0&&"a"===to&&(no+=t),Math.abs(z-no)>o&&(no<z?no+=t:no-=t),ao=u-(ro+=M)-d*no)),{ep:eo,inclp:so,nodep:no,argpp:ao,mp:ro}}function z(o){var s=(o-2451545)/36525,n=-62e-7*s*s*s+.093104*s*s+3164400184.812866*s+67310.54841;return(n=n*e/240%t)<0&&(n+=t),n}function v(){return(arguments.length<=0?void 0:arguments[0])instanceof Date||arguments.length>1?z(f.apply(void 0,arguments)):z.apply(void 0,arguments)}function y(e,s){var n,a,c,m,l,g,M,f,z,v,y,b,q,w,T,j,E,F,A,C,L,S,U,D,I,R;e.t=s,e.error=0;var O=e.mo+e.mdot*e.t,_=e.argpo+e.argpdot*e.t,k=e.nodeo+e.nodedot*e.t;f=_,C=O;var P=e.t*e.t;if(S=k+e.nodecf*P,j=1-e.cc1*e.t,E=e.bstar*e.cc4*e.t,F=e.t2cof*P,1!==e.isimp){g=e.omgcof*e.t;var Z=1+e.eta*Math.cos(O);C=O+(T=g+e.xmcof*(Z*Z*Z-e.delmo)),f=_-T,b=(y=P*e.t)*e.t,j=j-e.d2*P-e.d3*y-e.d4*b,E+=e.bstar*e.cc5*(Math.sin(C)-e.sinmao),F=F+e.t3cof*y+b*(e.t4cof+e.t*e.t5cof)}L=e.no;var G=e.ecco;if(A=e.inclo,"d"===e.method){q=e.t;var H=function(o){var e,s,n,a,d,r,i,c,h=o.irez,m=o.d2201,l=o.d2211,p=o.d3210,x=o.d3222,g=o.d4410,M=o.d4422,f=o.d5220,u=o.d5232,z=o.d5421,v=o.d5433,y=o.dedt,b=o.del1,q=o.del2,w=o.del3,T=o.didt,j=o.dmdt,E=o.dnodt,F=o.domdt,A=o.argpo,C=o.argpdot,L=o.t,S=o.tc,U=o.gsto,D=o.xfact,I=o.xlamo,R=o.no,O=o.atime,_=o.em,k=o.argpm,P=o.inclm,Z=o.xli,G=o.mm,H=o.xni,Y=o.nodem,$=o.nm,B=.13130908,J=2.8843198,K=.37448087,N=5.7686396,Q=.95240898,V=1.8014998,W=1.050833,X=4.4108898,oo=259200,to=0,eo=0,so=(U+.0043752690880113*S)%t;if(_+=y*L,P+=T*L,k+=F*L,Y+=E*L,G+=j*L,0!==h){(0===O||L*O<=0||Math.abs(L)<Math.abs(O))&&(O=0,H=R,Z=I),e=L>0?720:-720;for(var no=381;381===no;)2!==h?(i=b*Math.sin(Z-B)+q*Math.sin(2*(Z-J))+w*Math.sin(3*(Z-K)),d=H+D,r=b*Math.cos(Z-B)+2*q*Math.cos(2*(Z-J))+3*w*Math.cos(3*(Z-K)),r*=d):(n=(c=A+C*O)+c,s=Z+Z,i=m*Math.sin(n+Z-N)+l*Math.sin(Z-N)+p*Math.sin(c+Z-Q)+x*Math.sin(-c+Z-Q)+g*Math.sin(n+s-V)+M*Math.sin(s-V)+f*Math.sin(c+Z-W)+u*Math.sin(-c+Z-W)+z*Math.sin(c+s-X)+v*Math.sin(-c+s-X),d=H+D,r=m*Math.cos(n+Z-N)+l*Math.cos(Z-N)+p*Math.cos(c+Z-Q)+x*Math.cos(-c+Z-Q)+f*Math.cos(c+Z-W)+u*Math.cos(-c+Z-W)+2*g*Math.cos(n+s-V)+M*Math.cos(s-V)+z*Math.cos(c+s-X)+v*Math.cos(-c+s-X),r*=d),Math.abs(L-O)>=720?no=381:(eo=L-O,no=0),381===no&&(Z+=d*e+i*oo,H+=i*e+r*oo,O+=e);$=H+i*eo+r*eo*eo*.5,a=Z+d*eo+i*eo*eo*.5,1!==h?(G=a-2*Y+2*so,to=$-R):(G=a-Y-k+so,to=$-R),$=R+to}return{atime:O,em:_,argpm:k,inclm:P,xli:Z,mm:G,xni:H,nodem:Y,dndt:to,nm:$}}({irez:e.irez,d2201:e.d2201,d2211:e.d2211,d3210:e.d3210,d3222:e.d3222,d4410:e.d4410,d4422:e.d4422,d5220:e.d5220,d5232:e.d5232,d5421:e.d5421,d5433:e.d5433,dedt:e.dedt,del1:e.del1,del2:e.del2,del3:e.del3,didt:e.didt,dmdt:e.dmdt,dnodt:e.dnodt,domdt:e.domdt,argpo:e.argpo,argpdot:e.argpdot,t:e.t,tc:q,gsto:e.gsto,xfact:e.xfact,xlamo:e.xlamo,no:e.no,atime:e.atime,em:G,argpm:f,inclm:A,xli:e.xli,mm:C,xni:e.xni,nodem:S,nm:L});G=H.em,f=H.argpm,A=H.inclm,C=H.mm,S=H.nodem,L=H.nm}if(L<=0)return e.error=2,[!1,!1];var Y=Math.pow(r/L,x)*j*j;if(L=r/Math.pow(Y,1.5),(G-=E)>=1||G<-.001)return e.error=1,[!1,!1];G<1e-6&&(G=1e-6),D=(C+=e.no*F)+f+S;var $=G;if(U=A,z=f%=t,R=S%=t,I=C=((D%=t)-f-S)%t,m=Math.sin(A),c=Math.cos(A),"d"===e.method){var B=u(e,{inclo:e.inclo,init:"n",ep:$,inclp:U,nodep:R,argpp:z,mp:I,opsmode:e.operationmode});if($=B.ep,R=B.nodep,z=B.argpp,I=B.mp,(U=B.inclp)<0&&(U=-U,R+=o,z-=o),$<0||$>1)return e.error=3,[!1,!1]}"d"===e.method&&(m=Math.sin(U),c=Math.cos(U),e.aycof=-.5*p*m,Math.abs(c+1)>15e-13?e.xlcof=-.25*p*m*(3+5*c)/(1+c):e.xlcof=-.25*p*m*(3+5*c)/15e-13);var J=$*Math.cos(z);T=1/(Y*(1-$*$));var K=$*Math.sin(z)+T*e.aycof,N=(I+z+R+T*e.xlcof*J-R)%t;M=N,w=9999.9;for(var Q=1;Math.abs(w)>=1e-12&&Q<=10;)a=Math.sin(M),w=(N-K*(n=Math.cos(M))+J*a-M)/(w=1-n*J-a*K),Math.abs(w)>=.95&&(w=w>0?.95:-.95),M+=w,Q+=1;var V=J*n+K*a,W=J*a-K*n,X=J*J+K*K,oo=Y*(1-X);if(oo<0)return e.error=4,[!1,!1];var to=Y*(1-V),eo=Math.sqrt(Y)*W/to,so=Math.sqrt(oo)/to,no=Math.sqrt(1-X),ao=Y/to*(a-K-J*(T=W/(1+no))),ro=Y/to*(n-J+K*T);v=Math.atan2(ao,ro);var io=(ro+ro)*ao,co=1-2*ao*ao,ho=.5*h*(T=1/oo),mo=ho*T;"d"===e.method&&(l=c*c,e.con41=3*l-1,e.x1mth2=1-l,e.x7thm1=7*l-1);var lo=to*(1-1.5*mo*no*e.con41)+.5*ho*e.x1mth2*co;if(lo<1)return e.error=6,{position:!1,velocity:!1};v-=.25*mo*e.x7thm1*io;var po=R+1.5*mo*c*io,xo=U+1.5*mo*c*m*co,go=eo-L*ho*e.x1mth2*io/r,Mo=so+L*ho*(e.x1mth2*co+1.5*e.con41)/r,fo=Math.sin(v),uo=Math.cos(v),zo=Math.sin(po),vo=Math.cos(po),yo=Math.sin(xo),bo=Math.cos(xo),qo=-zo*bo,wo=vo*bo,To=qo*fo+vo*uo,jo=wo*fo+zo*uo,Eo=yo*fo;return{position:{x:lo*To*d,y:lo*jo*d,z:lo*Eo*d},velocity:{x:(go*To+Mo*(qo*uo-vo*fo))*i,y:(go*jo+Mo*(wo*uo-zo*fo))*i,z:(go*Eo+Mo*(yo*uo))*i}}}function b(e,s){var n,a,i,c,m,g,M,f,z,b,q,w,T,j,E,F,A,C,L,S,U,D,I,R,O,_,k,P,Z,G,H,Y,$,B,J,K,N,Q,V,W,X,oo,to,eo,so,no,ao,ro,io,co,ho,mo,lo=s.opsmode,po=s.satn,xo=s.epoch,go=s.xbstar,Mo=s.xecco,fo=s.xargpo,uo=s.xinclo,zo=s.xmo,vo=s.xno,yo=s.xnodeo;e.isimp=0,e.method="n",e.aycof=0,e.con41=0,e.cc1=0,e.cc4=0,e.cc5=0,e.d2=0,e.d3=0,e.d4=0,e.delmo=0,e.eta=0,e.argpdot=0,e.omgcof=0,e.sinmao=0,e.t=0,e.t2cof=0,e.t3cof=0,e.t4cof=0,e.t5cof=0,e.x1mth2=0,e.x7thm1=0,e.mdot=0,e.nodedot=0,e.xlcof=0,e.xmcof=0,e.nodecf=0,e.irez=0,e.d2201=0,e.d2211=0,e.d3210=0,e.d3222=0,e.d4410=0,e.d4422=0,e.d5220=0,e.d5232=0,e.d5421=0,e.d5433=0,e.dedt=0,e.del1=0,e.del2=0,e.del3=0,e.didt=0,e.dmdt=0,e.dnodt=0,e.domdt=0,e.e3=0,e.ee2=0,e.peo=0,e.pgho=0,e.pho=0,e.pinco=0,e.plo=0,e.se2=0,e.se3=0,e.sgh2=0,e.sgh3=0,e.sgh4=0,e.sh2=0,e.sh3=0,e.si2=0,e.si3=0,e.sl2=0,e.sl3=0,e.sl4=0,e.gsto=0,e.xfact=0,e.xgh2=0,e.xgh3=0,e.xgh4=0,e.xh2=0,e.xh3=0,e.xi2=0,e.xi3=0,e.xl2=0,e.xl3=0,e.xl4=0,e.xlamo=0,e.zmol=0,e.zmos=0,e.atime=0,e.xli=0,e.xni=0,e.bstar=go,e.ecco=Mo,e.argpo=fo,e.inclo=uo,e.mo=zo,e.no=vo,e.nodeo=yo,e.operationmode=lo;e.init="y",e.t=0;var bo=function(o){var e=o.ecco,s=o.epoch,n=o.inclo,a=o.opsmode,d=o.no,i=e*e,c=1-i,m=Math.sqrt(c),l=Math.cos(n),p=l*l,g=Math.pow(r/d,x),M=.75*h*(3*p-1)/(m*c),f=M/(g*g),u=g*(1-f*f-f*(1/3+134*f*f/81));d/=1+(f=M/(u*u));var z,y=Math.pow(r/d,x),b=Math.sin(n),q=y*c,w=1-5*p,T=-w-p-p,j=1/y,E=q*q,F=y*(1-e);if("a"===a){var A=s-7305,C=Math.floor(A+1e-8),L=.017202791694070362;(z=(1.7321343856509375+L*C+(L+t)*(A-C)+A*A*5075514194322695e-30)%t)<0&&(z+=t)}else z=v(s+2433281.5);return{no:d,method:"n",ainv:j,ao:y,con41:T,con42:w,cosio:l,cosio2:p,eccsq:i,omeosq:c,posq:E,rp:F,rteosq:m,sinio:b,gsto:z}}({satn:po,ecco:e.ecco,epoch:xo,inclo:e.inclo,no:e.no,method:e.method,opsmode:e.operationmode}),qo=bo.ao,wo=bo.con42,To=bo.cosio,jo=bo.cosio2,Eo=bo.eccsq,Fo=bo.omeosq,Ao=bo.posq,Co=bo.rp,Lo=bo.rteosq,So=bo.sinio;if(e.no=bo.no,e.con41=bo.con41,e.gsto=bo.gsto,e.error=0,Fo>=0||e.no>=0){if(e.isimp=0,Co<220/d+1&&(e.isimp=1),R=1.0122292763545218,C=1.8802768006108976e-9,(E=(Co-1)*d)<156){R=E-78,E<98&&(R=20);var Uo=(120-R)/d;C=Uo*Uo*Uo*Uo,R=R/d+1}F=1/Ao,oo=1/(qo-R),e.eta=qo*e.ecco*oo,w=e.eta*e.eta,q=e.ecco*e.eta,A=Math.abs(1-w),c=(M=(g=C*Math.pow(oo,4))/Math.pow(A,3.5))*e.no*(qo*(1+1.5*w+q*(4+w))+.375*h*oo/A*e.con41*(8+3*w*(8+w))),e.cc1=e.bstar*c,m=0,e.ecco>1e-4&&(m=-2*g*oo*p*e.no*So/e.ecco),e.x1mth2=1-jo,e.cc4=2*e.no*M*qo*Fo*(e.eta*(2+.5*w)+e.ecco*(.5+2*w)-h*oo/(qo*A)*(-3*e.con41*(1-2*q+w*(1.5-.5*q))+.75*e.x1mth2*(2*w-q*(1+w))*Math.cos(2*e.argpo))),e.cc5=2*M*qo*Fo*(1+2.75*(w+q)+q*w),f=jo*jo,W=.5*(V=1.5*h*F*e.no)*h*F,X=-.46875*l*F*F*e.no,e.mdot=e.no+.5*V*Lo*e.con41+.0625*W*Lo*(13-78*jo+137*f),e.argpdot=-.5*V*wo+.0625*W*(7-114*jo+395*f)+X*(3-36*jo+49*f),eo=-V*To,e.nodedot=eo+(.5*W*(4-19*jo)+2*X*(3-7*jo))*To,to=e.argpdot+e.nodedot,e.omgcof=e.bstar*m*Math.cos(e.argpo),e.xmcof=0,e.ecco>1e-4&&(e.xmcof=-x*g*e.bstar/q),e.nodecf=3.5*Fo*eo*e.cc1,e.t2cof=1.5*e.cc1,Math.abs(To+1)>15e-13?e.xlcof=-.25*p*So*(3+5*To)/(1+To):e.xlcof=-.25*p*So*(3+5*To)/15e-13,e.aycof=-.5*p*So;var Do=1+e.eta*Math.cos(e.mo);if(e.delmo=Do*Do*Do,e.sinmao=Math.sin(e.mo),e.x7thm1=7*jo-1,2*o/e.no>=225){e.method="d",e.isimp=1,0,T=e.inclo;var Io=function(o){var e,s,n,a,d,r,i,c,h,m,l,p,x,g,M,f,u,z,v,y,b,q,w,T,j,E,F,A,C,L,S,U,D,I,R,O,_,k,P,Z,G,H,Y,$,B,J,K,N,Q,V,W,X,oo,to,eo,so,no,ao,ro,io,co,ho,mo,lo=o.epoch,po=o.ep,xo=o.argpp,go=o.tc,Mo=o.inclp,fo=o.nodep,uo=.01675,zo=.0549,vo=o.np,yo=po,bo=Math.sin(fo),qo=Math.cos(fo),wo=Math.sin(xo),To=Math.cos(xo),jo=Math.sin(Mo),Eo=Math.cos(Mo),Fo=yo*yo,Ao=1-Fo,Co=Math.sqrt(Ao),Lo=lo+18261.5+go/1440,So=(4.523602-.00092422029*Lo)%t,Uo=Math.sin(So),Do=Math.cos(So),Io=.91375164-.03568096*Do,Ro=Math.sqrt(1-Io*Io),Oo=.089683511*Uo/Ro,_o=Math.sqrt(1-Oo*Oo),ko=5.8351514+.001944368*Lo,Po=.39785416*Uo/Ro,Zo=_o*Do+.91744867*Oo*Uo;Po=Math.atan2(Po,Zo),Po+=ko-So;var Go=Math.cos(Po),Ho=Math.sin(Po);y=.1945905,b=-.98088458,T=.91744867,j=.39785416,q=qo,w=bo,l=29864797e-13;for(var Yo=1/vo,$o=0;$o<2;)eo=-6*(e=y*q+b*T*w)*(d=-jo*(i=-y*w+b*T*q)+Eo*(c=b*j))+Fo*(-24*(p=e*To+(s=Eo*i+jo*c)*wo)*(z=d*To)-6*(g=-e*wo+s*To)*(f=d*wo)),so=-6*(e*(r=-jo*(h=b*w+y*T*q)+Eo*(m=y*j))+(n=-b*q+y*T*w)*d)+Fo*(-24*((x=n*To+(a=Eo*h+jo*m)*wo)*z+p*(v=r*To))+-6*(g*(u=r*wo)+(M=-n*wo+a*To)*f)),no=-6*n*r+Fo*(-24*x*v-6*M*u),ao=6*s*d+Fo*(24*p*f-6*g*z),ro=6*(a*d+s*r)+Fo*(24*(x*f+p*u)-6*(M*z+g*v)),io=6*a*r+Fo*(24*x*u-6*M*v),X=(X=3*(e*e+s*s)+(co=12*p*p-3*g*g)*Fo)+X+Ao*co,oo=(oo=6*(e*n+s*a)+(ho=24*p*x-6*g*M)*Fo)+oo+Ao*ho,to=(to=3*(n*n+a*a)+(mo=12*x*x-3*M*M)*Fo)+to+Ao*mo,J=-.5*(K=l*Yo)/Co,B=-15*yo*(N=K*Co),Q=p*g+x*M,V=x*g+p*M,W=x*M-p*g,1===($o+=1)&&(E=B,F=J,A=K,C=N,L=Q,S=V,U=W,D=X,I=oo,R=to,O=eo,_=so,k=no,P=ao,Z=ro,G=io,H=co,Y=ho,$=mo,y=Go,b=Ho,T=Io,j=Ro,q=_o*qo+Oo*bo,w=bo*_o-qo*Oo,l=4.7968065e-7);return{snodm:bo,cnodm:qo,sinim:jo,cosim:Eo,sinomm:wo,cosomm:To,day:Lo,e3:2*B*W,ee2:2*B*V,em:yo,emsq:Fo,gam:ko,peo:0,pgho:0,pho:0,pinco:0,plo:0,rtemsq:Co,se2:2*E*S,se3:2*E*U,sgh2:2*C*Y,sgh3:2*C*($-H),sgh4:-18*C*uo,sh2:-2*F*Z,sh3:-2*F*(G-P),si2:2*F*_,si3:2*F*(k-O),sl2:-2*A*I,sl3:-2*A*(R-D),sl4:-2*A*(-21-9*Fo)*uo,s1:B,s2:J,s3:K,s4:N,s5:Q,s6:V,s7:W,ss1:E,ss2:F,ss3:A,ss4:C,ss5:L,ss6:S,ss7:U,sz1:D,sz2:I,sz3:R,sz11:O,sz12:_,sz13:k,sz21:P,sz22:Z,sz23:G,sz31:H,sz32:Y,sz33:$,xgh2:2*N*ho,xgh3:2*N*(mo-co),xgh4:-18*N*zo,xh2:-2*J*ro,xh3:-2*J*(io-ao),xi2:2*J*so,xi3:2*J*(no-eo),xl2:-2*K*oo,xl3:-2*K*(to-X),xl4:-2*K*(-21-9*Fo)*zo,nm:vo,z1:X,z2:oo,z3:to,z11:eo,z12:so,z13:no,z21:ao,z22:ro,z23:io,z31:co,z32:ho,z33:mo,zmol:(.2299715*Lo-ko+4.7199672)%t,zmos:(6.2565837+.017201977*Lo)%t}}({epoch:xo,ep:e.ecco,argpp:e.argpo,tc:0,inclp:e.inclo,nodep:e.nodeo,np:e.no,e3:e.e3,ee2:e.ee2,peo:e.peo,pgho:e.pgho,pho:e.pho,pinco:e.pinco,plo:e.plo,se2:e.se2,se3:e.se3,sgh2:e.sgh2,sgh3:e.sgh3,sgh4:e.sgh4,sh2:e.sh2,sh3:e.sh3,si2:e.si2,si3:e.si3,sl2:e.sl2,sl3:e.sl3,sl4:e.sl4,xgh2:e.xgh2,xgh3:e.xgh3,xgh4:e.xgh4,xh2:e.xh2,xh3:e.xh3,xi2:e.xi2,xi3:e.xi3,xl2:e.xl2,xl3:e.xl3,xl4:e.xl4,zmol:e.zmol,zmos:e.zmos});e.e3=Io.e3,e.ee2=Io.ee2,e.peo=Io.peo,e.pgho=Io.pgho,e.pho=Io.pho,e.pinco=Io.pinco,e.plo=Io.plo,e.se2=Io.se2,e.se3=Io.se3,e.sgh2=Io.sgh2,e.sgh3=Io.sgh3,e.sgh4=Io.sgh4,e.sh2=Io.sh2,e.sh3=Io.sh3,e.si2=Io.si2,e.si3=Io.si3,e.sl2=Io.sl2,e.sl3=Io.sl3,e.sl4=Io.sl4,a=Io.sinim,n=Io.cosim,z=Io.em,b=Io.emsq,L=Io.s1,S=Io.s2,U=Io.s3,D=Io.s4,I=Io.s5,O=Io.ss1,_=Io.ss2,k=Io.ss3,P=Io.ss4,Z=Io.ss5,G=Io.sz1,H=Io.sz3,Y=Io.sz11,$=Io.sz13,B=Io.sz21,J=Io.sz23,K=Io.sz31,N=Io.sz33,e.xgh2=Io.xgh2,e.xgh3=Io.xgh3,e.xgh4=Io.xgh4,e.xh2=Io.xh2,e.xh3=Io.xh3,e.xi2=Io.xi2,e.xi3=Io.xi3,e.xl2=Io.xl2,e.xl3=Io.xl3,e.xl4=Io.xl4,e.zmol=Io.zmol,e.zmos=Io.zmos,j=Io.nm,so=Io.z1,no=Io.z3,ao=Io.z11,ro=Io.z13,io=Io.z21,co=Io.z23,ho=Io.z31,mo=Io.z33;var Ro=u(e,{inclo:T,init:e.init,ep:e.ecco,inclp:e.inclo,nodep:e.nodeo,argpp:e.argpo,mp:e.mo,opsmode:e.operationmode});e.ecco=Ro.ep,e.inclo=Ro.inclp,e.nodeo=Ro.nodep,e.argpo=Ro.argpp,e.mo=Ro.mp,0,0,0;var Oo=function(e){var s,n,a,d,i,c,h,m,l,p,g,M,f,u,z,v,y,b=e.cosim,q=e.argpo,w=e.s1,T=e.s2,j=e.s3,E=e.s4,F=e.s5,A=e.sinim,C=e.ss1,L=e.ss2,S=e.ss3,U=e.ss4,D=e.ss5,I=e.sz1,R=e.sz3,O=e.sz11,_=e.sz13,k=e.sz21,P=e.sz23,Z=e.sz31,G=e.sz33,H=e.t,Y=e.tc,$=e.gsto,B=e.mo,J=e.mdot,K=e.no,N=e.nodeo,Q=e.nodedot,V=e.xpidot,W=e.z1,X=e.z3,oo=e.z11,to=e.z13,eo=e.z21,so=e.z23,no=e.z31,ao=e.z33,ro=e.ecco,io=e.eccsq,co=e.emsq,ho=e.em,mo=e.argpm,lo=e.inclm,po=e.mm,xo=e.nm,go=e.nodem,Mo=e.irez,fo=e.atime,uo=e.d2201,zo=e.d2211,vo=e.d3210,yo=e.d3222,bo=e.d4410,qo=e.d4422,wo=e.d5220,To=e.d5232,jo=e.d5421,Eo=e.d5433,Fo=e.dedt,Ao=e.didt,Co=e.dmdt,Lo=e.dnodt,So=e.domdt,Uo=e.del1,Do=e.del2,Io=e.del3,Ro=e.xfact,Oo=e.xlamo,_o=e.xli,ko=e.xni,Po=.0043752690880113,Zo=.00015835218,Go=119459e-10;Mo=0,xo<.0052359877&&xo>.0034906585&&(Mo=1),xo>=.00826&&xo<=.00924&&ho>=.5&&(Mo=2);var Ho=-Go*L*(k+P);(lo<.052359877||lo>o-.052359877)&&(Ho=0),0!==A&&(Ho/=A);var Yo=-Zo*T*(eo+so);(lo<.052359877||lo>o-.052359877)&&(Yo=0),So=U*Go*(Z+G-6)-b*Ho+E*Zo*(no+ao-6),Lo=Ho,0!==A&&(So-=b/A*Yo,Lo+=Yo/A);var $o=($+Y*Po)%t;if(ho+=(Fo=C*Go*D+w*Zo*F)*H,lo+=(Ao=L*Go*(O+_)+T*Zo*(oo+to))*H,mo+=So*H,go+=Lo*H,po+=(Co=-Go*S*(I+R-14-6*co)-Zo*j*(W+X-14-6*co))*H,0!==Mo){if(z=Math.pow(xo/r,x),2===Mo){var Bo=ho,Jo=co;y=(ho=ro)*(co=io),ho<=.65?(a=3.616-13.247*ho+16.29*co,d=117.39*ho-19.302-228.419*co+156.591*y,i=109.7927*ho-18.9068-214.6334*co+146.5816*y,c=242.694*ho-41.122-471.094*co+313.953*y,h=841.88*ho-146.407-1629.014*co+1083.435*y,m=3017.977*ho-532.114-5740.032*co+3708.276*y):(a=331.819*ho-72.099-508.738*co+266.724*y,d=1582.851*ho-346.844-2415.925*co+1246.113*y,i=1554.908*ho-342.585-2366.899*co+1215.972*y,c=4758.686*ho-1052.797-7193.992*co+3651.957*y,h=16178.11*ho-3581.69-24462.77*co+12422.52*y,m=ho>.715?29936.92*ho-5149.66-54087.36*co+31324.56*y:1464.74-4664.75*ho+3763.64*co),ho<.7?(g=4988.61*ho-919.2277-9064.77*co+5542.21*y,l=4568.6173*ho-822.71072-8491.4146*co+5337.524*y,p=4690.25*ho-853.666-8624.77*co+5341.4*y):(g=161616.52*ho-37995.78-229838.2*co+109377.94*y,l=218913.95*ho-51752.104-309468.16*co+146349.42*y,p=170470.89*ho-40023.88-242699.48*co+115605.82*y),uo=(f=17891679e-13*(u=xo*xo*3*(z*z)))*(s=.75*(1+2*b+(v=b*b)))*(-.306-.44*(ho-.64)),zo=f*(1.5*(M=A*A))*a,vo=(f=3.7393792e-7*(u*=z))*(1.875*A*(1-2*b-3*v))*d,yo=f*(-1.875*A*(1+2*b-3*v))*i,bo=(f=2*(u*=z)*7.3636953e-9)*(35*M*s)*c,qo=f*(39.375*M*M)*h,wo=(f=1.1428639e-7*(u*=z))*(9.84375*A*(M*(1-2*b-5*v)+.33333333*(4*b-2+6*v)))*m,To=f*(A*(4.92187512*M*(-2-4*b+10*v)+6.56250012*(1+2*b-3*v)))*p,jo=(f=2*u*2.1765803e-9)*(29.53125*A*(2-8*b+v*(8*b-12+10*v)))*l,Eo=f*(29.53125*A*(-2-8*b+v*(12+8*b-10*v)))*g,Oo=(B+N+N-($o+$o))%t,Ro=J+Co+2*(Q+Lo-Po)-K,ho=Bo,co=Jo}1===Mo&&(n=1+b,Do=2*(Uo=3*xo*xo*z*z)*(s=.75*(1+b)*(1+b))*(1+co*(.8125*co-2.5))*17891679e-13,Io=3*Uo*(n*=1.875*n*n)*(1+co*(6.60937*co-6))*2.2123015e-7*z,Uo=Uo*(.9375*A*A*(1+3*b)-.75*(1+b))*(d=1+2*co)*21460748e-13*z,Oo=(B+N+q-$o)%t,Ro=J+V+Co+So+Lo-(K+Po)),_o=Oo,ko=K,fo=0,xo=K+0}return{em:ho,argpm:mo,inclm:lo,mm:po,nm:xo,nodem:go,irez:Mo,atime:fo,d2201:uo,d2211:zo,d3210:vo,d3222:yo,d4410:bo,d4422:qo,d5220:wo,d5232:To,d5421:jo,d5433:Eo,dedt:Fo,didt:Ao,dmdt:Co,dndt:0,dnodt:Lo,domdt:So,del1:Uo,del2:Do,del3:Io,xfact:Ro,xlamo:Oo,xli:_o,xni:ko}}({cosim:n,emsq:b,argpo:e.argpo,s1:L,s2:S,s3:U,s4:D,s5:I,sinim:a,ss1:O,ss2:_,ss3:k,ss4:P,ss5:Z,sz1:G,sz3:H,sz11:Y,sz13:$,sz21:B,sz23:J,sz31:K,sz33:N,t:e.t,tc:0,gsto:e.gsto,mo:e.mo,mdot:e.mdot,no:e.no,nodeo:e.nodeo,nodedot:e.nodedot,xpidot:to,z1:so,z3:no,z11:ao,z13:ro,z21:io,z23:co,z31:ho,z33:mo,ecco:e.ecco,eccsq:Eo,em:z,argpm:0,inclm:T,mm:0,nm:j,nodem:0,irez:e.irez,atime:e.atime,d2201:e.d2201,d2211:e.d2211,d3210:e.d3210,d3222:e.d3222,d4410:e.d4410,d4422:e.d4422,d5220:e.d5220,d5232:e.d5232,d5421:e.d5421,d5433:e.d5433,dedt:e.dedt,didt:e.didt,dmdt:e.dmdt,dnodt:e.dnodt,domdt:e.domdt,del1:e.del1,del2:e.del2,del3:e.del3,xfact:e.xfact,xlamo:e.xlamo,xli:e.xli,xni:e.xni});e.irez=Oo.irez,e.atime=Oo.atime,e.d2201=Oo.d2201,e.d2211=Oo.d2211,e.d3210=Oo.d3210,e.d3222=Oo.d3222,e.d4410=Oo.d4410,e.d4422=Oo.d4422,e.d5220=Oo.d5220,e.d5232=Oo.d5232,e.d5421=Oo.d5421,e.d5433=Oo.d5433,e.dedt=Oo.dedt,e.didt=Oo.didt,e.dmdt=Oo.dmdt,e.dnodt=Oo.dnodt,e.domdt=Oo.domdt,e.del1=Oo.del1,e.del2=Oo.del2,e.del3=Oo.del3,e.xfact=Oo.xfact,e.xlamo=Oo.xlamo,e.xli=Oo.xli,e.xni=Oo.xni}1!==e.isimp&&(i=e.cc1*e.cc1,e.d2=4*qo*oo*i,Q=e.d2*oo*e.cc1/3,e.d3=(17*qo+R)*Q,e.d4=.5*Q*qo*oo*(221*qo+31*R)*e.cc1,e.t3cof=e.d2+2*i,e.t4cof=.25*(3*e.d3+e.cc1*(12*e.d2+10*i)),e.t5cof=.2*(3*e.d4+12*e.cc1*e.d3+6*e.d2*e.d2+15*i*(2*e.d2+i)))}y(e,0),e.init="n"}function q(o){return function(o){if(Array.isArray(o))return w(o)}(o)||function(o){if("undefined"!=typeof Symbol&&Symbol.iterator in Object(o))return Array.from(o)}(o)||function(o,t){if(!o)return;if("string"==typeof o)return w(o,t);var e=Object.prototype.toString.call(o).slice(8,-1);"Object"===e&&o.constructor&&(e=o.constructor.name);if("Map"===e||"Set"===e)return Array.from(o);if("Arguments"===e||/^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(e))return w(o,t)}(o)||function(){throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.")}()}function w(o,t){(null==t||t>o.length)&&(t=o.length);for(var e=0,s=new Array(t);e<t;e++)s[e]=o[e];return s}function T(o){return o*s}function j(o){return o*e}function E(o){var t=o.longitude,e=o.latitude,s=o.height,n=6378.137,a=(n-6356.7523142)/n,d=2*a-a*a,r=n/Math.sqrt(1-d*(Math.sin(e)*Math.sin(e)));return{x:(r+s)*Math.cos(e)*Math.cos(t),y:(r+s)*Math.cos(e)*Math.sin(t),z:(r*(1-d)+s)*Math.sin(e)}}return{constants:Object.freeze({__proto__:null,pi:o,twoPi:t,deg2rad:e,rad2deg:s,minutesPerDay:n,mu:a,earthRadius:d,xke:r,vkmpersec:i,tumin:c,j2:h,j3:m,j4:l,j3oj2:p,x2o3:x}),propagate:function(){for(var o=arguments.length,t=new Array(o),e=0;e<o;e++)t[e]=arguments[e];var s=t[0],a=Array.prototype.slice.call(t,1),d=f.apply(void 0,q(a)),r=(d-s.jdsatepoch)*n;return y(s,r)},sgp4:y,twoline2satrec:function(t,s){var n=1440/(2*o),a=0,d={error:0};d.satnum=t.substring(2,7),d.epochyr=parseInt(t.substring(18,20),10),d.epochdays=parseFloat(t.substring(20,32)),d.ndot=parseFloat(t.substring(33,43)),d.nddot=parseFloat(".".concat(parseInt(t.substring(44,50),10),"E").concat(t.substring(50,52))),d.bstar=parseFloat("".concat(t.substring(53,54),".").concat(parseInt(t.substring(54,59),10),"E").concat(t.substring(59,61))),d.inclo=parseFloat(s.substring(8,16)),d.nodeo=parseFloat(s.substring(17,25)),d.ecco=parseFloat(".".concat(s.substring(26,33))),d.argpo=parseFloat(s.substring(34,42)),d.mo=parseFloat(s.substring(43,51)),d.no=parseFloat(s.substring(52,63)),d.no/=n,d.a=Math.pow(d.no*c,-2/3),d.ndot/=1440*n,d.nddot/=1440*n*1440,d.inclo*=e,d.nodeo*=e,d.argpo*=e,d.mo*=e,d.alta=d.a*(1+d.ecco)-1,d.altp=d.a*(1-d.ecco)-1;var r=g(a=d.epochyr<57?d.epochyr+2e3:d.epochyr+1900,d.epochdays),i=r.mon,h=r.day,m=r.hr,l=r.minute,p=r.sec;return d.jdsatepoch=f(a,i,h,m,l,p),b(d,{opsmode:"i",satn:d.satnum,epoch:d.jdsatepoch-2433281.5,xbstar:d.bstar,xecco:d.ecco,xargpo:d.argpo,xinclo:d.inclo,xmo:d.mo,xno:d.no,xnodeo:d.nodeo}),d},gstime:v,jday:f,invjday:function(o,t){var e=o-2415019.5,s=e/365.25,n=1900+Math.floor(s),a=Math.floor(.25*(n-1901)),d=e-(365*(n-1900)+a)+1e-11;d<1&&(d=e-(365*((n-=1)-1900)+(a=Math.floor(.25*(n-1901)))));var r=g(n,d),i=r.mon,c=r.day,h=r.hr,m=r.minute,l=r.sec-864e-9;return t?[n,i,c,h,m,Math.floor(l)]:new Date(Date.UTC(n,i-1,c,h,m,Math.floor(l)))},dopplerFactor:function(o,t,e){var s=7292115e-11,n={x:t.x-o.x,y:t.y-o.y,z:t.z-o.z};n.w=Math.sqrt(Math.pow(n.x,2)+Math.pow(n.y,2)+Math.pow(n.z,2));var a=e.x+s*o.y,d=e.y-s*o.x,r=e.z,i=(n.x*a+n.y*d+n.z*r)/n.w;return 1+i/299792.458*(i>=0?1:-1)},radiansToDegrees:T,degreesToRadians:j,degreesLat:function(t){if(t<-o/2||t>o/2)throw new RangeError("Latitude radians must be in range [-pi/2; pi/2].");return T(t)},degreesLong:function(t){if(t<-o||t>o)throw new RangeError("Longitude radians must be in range [-pi; pi].");return T(t)},radiansLat:function(o){if(o<-90||o>90)throw new RangeError("Latitude degrees must be in range [-90; 90].");return j(o)},radiansLong:function(o){if(o<-180||o>180)throw new RangeError("Longitude degrees must be in range [-180; 180].");return j(o)},geodeticToEcf:E,eciToGeodetic:function(e,s){for(var n=6378.137,a=Math.sqrt(e.x*e.x+e.y*e.y),d=(n-6356.7523142)/n,r=2*d-d*d,i=Math.atan2(e.y,e.x)-s;i<-o;)i+=t;for(;i>o;)i-=t;for(var c,h=0,m=Math.atan2(e.z,Math.sqrt(e.x*e.x+e.y*e.y));h<20;)c=1/Math.sqrt(1-r*(Math.sin(m)*Math.sin(m))),m=Math.atan2(e.z+n*c*r*Math.sin(m),a),h+=1;return{longitude:i,latitude:m,height:a/Math.cos(m)-n*c}},eciToEcf:function(o,t){return{x:o.x*Math.cos(t)+o.y*Math.sin(t),y:o.x*-Math.sin(t)+o.y*Math.cos(t),z:o.z}},ecfToEci:function(o,t){return{x:o.x*Math.cos(t)-o.y*Math.sin(t),y:o.x*Math.sin(t)+o.y*Math.cos(t),z:o.z}},ecfToLookAngles:function(t,e){var s,n,a,d,r,i,c=function(o,t){var e=o.longitude,s=o.latitude,n=E(o),a=t.x-n.x,d=t.y-n.y,r=t.z-n.z;return{topS:Math.sin(s)*Math.cos(e)*a+Math.sin(s)*Math.sin(e)*d-Math.cos(s)*r,topE:-Math.sin(e)*a+Math.cos(e)*d,topZ:Math.cos(s)*Math.cos(e)*a+Math.cos(s)*Math.sin(e)*d+Math.sin(s)*r}}(t,e);return n=(s=c).topS,a=s.topE,d=s.topZ,r=Math.sqrt(n*n+a*a+d*d),i=Math.asin(d/r),{azimuth:Math.atan2(-a,n)+o,elevation:i,rangeSat:r}}}}));
 
-        function pad(n) { return (n < 10 ? "0" : "") + n; }
+</script>
+<script>
+// Accessible HamClock — pure logic, no DOM and no network.
+// Shared by the page and by the node test harness. In the browser these
+// functions are globals; under node they are exported (see the bottom).
 
-        // Format a Date in a given IANA time zone as 24-hour HH:MM.
-        function fmtTime(date, tz) {
+var DEG = Math.PI / 180;
+
+function norm360(x) {
+  x = x % 360;
+  return x < 0 ? x + 360 : x;
+}
+
+function pad(n) { return (n < 10 ? "0" : "") + n; }
+
+// 24-hour HH:MM in a given IANA time zone.
+function fmtTime(date, tz) {
+  try {
+    var parts = new Intl.DateTimeFormat("en-GB", {
+      timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false
+    }).formatToParts(date);
+    var h = "00", m = "00";
+    for (var i = 0; i < parts.length; i++) {
+      if (parts[i].type === "hour") h = parts[i].value;
+      if (parts[i].type === "minute") m = parts[i].value;
+    }
+    if (h === "24") h = "00";
+    return h + ":" + m;
+  } catch (e) {
+    return pad(date.getUTCHours()) + ":" + pad(date.getUTCMinutes());
+  }
+}
+
+// 24-hour HH:MM:SS in a given IANA time zone (for the ticking clocks).
+function fmtTimeSec(date, tz) {
+  try {
+    var parts = new Intl.DateTimeFormat("en-GB", {
+      timeZone: tz, hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false
+    }).formatToParts(date);
+    var h = "00", m = "00", s = "00";
+    for (var i = 0; i < parts.length; i++) {
+      if (parts[i].type === "hour") h = parts[i].value;
+      if (parts[i].type === "minute") m = parts[i].value;
+      if (parts[i].type === "second") s = parts[i].value;
+    }
+    if (h === "24") h = "00";
+    return h + ":" + m + ":" + s;
+  } catch (e) {
+    return pad(date.getUTCHours()) + ":" + pad(date.getUTCMinutes()) + ":" + pad(date.getUTCSeconds());
+  }
+}
+
+function fmtDate(date, tz) {
+  try {
+    return new Intl.DateTimeFormat("en-US", {
+      timeZone: tz, weekday: "long", year: "numeric", month: "long", day: "numeric"
+    }).format(date);
+  } catch (e) {
+    return date.toUTCString();
+  }
+}
+
+// ---- Flare class from GOES 0.1-0.8nm flux (W/m^2) -----------------------
+// A: 1e-8..1e-7, B: 1e-7..1e-6, C: 1e-6..1e-5, M: 1e-5..1e-4, X: >= 1e-4.
+// A/B = quiet, C = moderate, M/X = active.
+function flareClass(flux) {
+  if (!(flux > 0) || !isFinite(flux)) return { label: null, note: "quiet" };
+  var letters = ["A", "B", "C", "M", "X"];
+  var exp = Math.floor(Math.log10(flux)); // -8 => A, -7 => B, -6 => C, -5 => M, -4+ => X
+  var idx, digit;
+  if (exp >= -4) { idx = 4; digit = flux / 1e-4; }
+  else if (exp <= -9) { idx = 0; digit = flux / 1e-8; }
+  else { idx = exp + 8; digit = flux / Math.pow(10, exp); }
+  digit = Math.round(digit * 10) / 10;
+  if (digit >= 10 && idx < 4) { idx += 1; digit = 1.0; } // e.g. B9.97 rounds up to C1.0
+  if (digit >= 10) digit = 9.9; // X-class cap for display
+  var letter = letters[idx];
+  var note = (letter === "A" || letter === "B") ? "quiet" : (letter === "C" ? "moderate" : "active");
+  return { label: letter + digit.toFixed(1), note: note };
+}
+
+// ---- Band table: the VIH flux-and-Kp calibration ------------------------
+// Base at flux ~92, Kp <= 3.5. Adjustments applied in the spec's own order:
+// Kp drops first, then the low-Kp raise, then flux raises, then the low-flux drop.
+var BAND_BASE = {
+  "80": ["Fair", "Good"], "40": ["Fair", "Good"], "30": ["Fair", "Fair"],
+  "20": ["Fair", "Fair"], "17": ["Fair", "Poor"], "15": ["Poor", "Poor"],
+  "12": ["Poor", "Poor"], "10": ["Poor", "Poor"]
+};
+var BAND_ORDER = ["80", "40", "30", "20", "17", "15", "12", "10"];
+var RATING_STEPS = ["Poor", "Fair", "Good"];
+
+function shiftRating(rating, n) {
+  var i = RATING_STEPS.indexOf(rating);
+  if (i < 0) return rating;
+  i += n;
+  if (i < 0) i = 0;
+  if (i > 2) i = 2;
+  return RATING_STEPS[i];
+}
+
+function bandTable(flux, kp) {
+  var t = {};
+  for (var i = 0; i < BAND_ORDER.length; i++) {
+    var b = BAND_ORDER[i];
+    t[b] = [BAND_BASE[b][0], BAND_BASE[b][1]];
+  }
+  var drop = 0;
+  if (kp >= 7) drop = 2;
+  else if (kp >= 5) drop = 1;
+  if (drop > 0) {
+    for (var j = 0; j < BAND_ORDER.length; j++) {
+      var bj = BAND_ORDER[j];
+      t[bj] = [shiftRating(t[bj][0], -drop), shiftRating(t[bj][1], -drop)];
+    }
+  }
+  if (kp <= 1.5) {
+    t["30"][1] = shiftRating(t["30"][1], 1);
+    t["20"][1] = shiftRating(t["20"][1], 1);
+  }
+  if (flux >= 110) t["17"][0] = shiftRating(t["17"][0], 1);
+  if (flux >= 130) {
+    t["15"][0] = shiftRating(t["15"][0], 1);
+    t["20"][0] = shiftRating(t["20"][0], 1);
+  }
+  if (flux >= 150) {
+    t["15"][1] = shiftRating(t["15"][1], 1);
+    t["12"][0] = shiftRating(t["12"][0], 1);
+  }
+  if (flux < 80) {
+    t["17"][0] = "Poor";
+    t["20"] = [shiftRating(t["20"][0], -1), shiftRating(t["20"][1], -1)];
+  }
+  return t;
+}
+
+// ---- Band from frequency (kHz) ------------------------------------------
+function bandFromKhz(f) {
+  if (f >= 1800 && f < 2000) return "160 meters";
+  if (f >= 3500 && f < 4000) return "80 meters";
+  if (f >= 5330 && f < 5406) return "60 meters";
+  if (f >= 7000 && f < 7300) return "40 meters";
+  if (f >= 10100 && f < 10150) return "30 meters";
+  if (f >= 14000 && f < 14350) return "20 meters";
+  if (f >= 18068 && f < 18168) return "17 meters";
+  if (f >= 21000 && f < 21450) return "15 meters";
+  if (f >= 24890 && f < 24990) return "12 meters";
+  if (f >= 28000 && f < 29700) return "10 meters";
+  if (f >= 50000 && f < 54000) return "6 meters";
+  return null;
+}
+
+// ---- Compass point from an azimuth in degrees ---------------------------
+function compass(deg) {
+  var pts = ["north", "northeast", "east", "southeast", "south", "southwest", "west", "northwest"];
+  var d = ((deg % 360) + 360) % 360;
+  return pts[Math.round(d / 45) % 8];
+}
+
+// ---- Solar position (NOAA solar algorithm) ------------------------------
+// All angles in degrees unless noted. Times are UTC unless noted.
+
+function julianDay(date) {
+  return date.getTime() / 86400000 + 2440587.5;
+}
+
+function julianCentury(jd) {
+  return (jd - 2451545.0) / 36525.0;
+}
+
+function geomMeanLongSun(T) {
+  return norm360(280.46646 + T * (36000.76983 + T * 0.0003032));
+}
+
+function geomMeanAnomSun(T) {
+  return 357.52911 + T * (35999.05029 - T * 0.0001537);
+}
+
+function eccentEarthOrbit(T) {
+  return 0.016708634 - T * (0.000042037 + T * 0.0000001267);
+}
+
+function sunEqOfCtr(T) {
+  var M = geomMeanAnomSun(T) * DEG;
+  return Math.sin(M) * (1.914602 - T * (0.004817 + 0.000014 * T))
+       + Math.sin(2 * M) * (0.019993 - 0.000101 * T)
+       + Math.sin(3 * M) * 0.000289;
+}
+
+function sunTrueLong(T) {
+  return geomMeanLongSun(T) + sunEqOfCtr(T);
+}
+
+function sunAppLong(T) {
+  return sunTrueLong(T) - 0.00569 - 0.00478 * Math.sin((125.04 - 1934.136 * T) * DEG);
+}
+
+function meanObliqEcliptic(T) {
+  return 23 + (26 + (21.448 - T * (46.815 + T * (0.00059 - T * 0.001813))) / 60) / 60;
+}
+
+function obliqCorr(T) {
+  return meanObliqEcliptic(T) + 0.00256 * Math.cos((125.04 - 1934.136 * T) * DEG);
+}
+
+function sunDeclin(T) {
+  var e = obliqCorr(T) * DEG;
+  var lambda = sunAppLong(T) * DEG;
+  return Math.asin(Math.sin(e) * Math.sin(lambda)) / DEG;
+}
+
+function varY(T) {
+  var e = obliqCorr(T) * DEG;
+  var t = Math.tan(e / 2);
+  return t * t;
+}
+
+// Equation of time, in minutes.
+function eqOfTime(T) {
+  var L0 = geomMeanLongSun(T) * DEG;
+  var e = eccentEarthOrbit(T);
+  var M = geomMeanAnomSun(T) * DEG;
+  var y = varY(T);
+  var Etime = y * Math.sin(2 * L0) - 2 * e * Math.sin(M)
+    + 4 * e * y * Math.sin(M) * Math.cos(2 * L0)
+    - 0.5 * y * y * Math.sin(4 * L0) - 1.25 * e * e * Math.sin(2 * M);
+  return Etime / DEG * 4;
+}
+
+// Solar declination (degrees) and equation of time (minutes) at a moment.
+function solarEphemeris(date) {
+  var T = julianCentury(julianDay(date));
+  return { declination: sunDeclin(T), eqTime: eqOfTime(T) };
+}
+
+// Subsolar point at a moment: latitude = declination; longitude from the
+// equation of time and the UTC clock.
+function subsolarPoint(date) {
+  var eph = solarEphemeris(date);
+  var utcMin = date.getUTCHours() * 60 + date.getUTCMinutes() + date.getUTCSeconds() / 60;
+  var lon = (720 - utcMin - eph.eqTime) / 4;
+  while (lon > 180) lon -= 360;
+  while (lon < -180) lon += 360;
+  return { latitude: eph.declination, longitude: lon };
+}
+
+// Sunrise and sunset (UTC Date objects) for a latitude/longitude on the
+// UTC date containing local noon at that longitude. Returns nulls when the
+// sun never rises or never sets that day.
+function sunriseSunset(date, lat, lon) {
+  // Use local noon as the reference moment for declination / equation of time.
+  var utcMidnight = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+  var noonRef = new Date(utcMidnight + (720 - 4 * lon) * 60000);
+  var eph = solarEphemeris(noonRef);
+  var latR = lat * DEG;
+  var dR = eph.declination * DEG;
+  var cosH = (Math.cos(90.833 * DEG) / (Math.cos(latR) * Math.cos(dR))) - Math.tan(latR) * Math.tan(dR);
+  if (cosH > 1 || cosH < -1) return { sunrise: null, sunset: null };
+  var haDeg = Math.acos(cosH) / DEG; // hour angle at rise/set, degrees
+  var solarNoonMin = 720 - 4 * lon - eph.eqTime; // minutes from 00:00 UTC
+  var riseMin = solarNoonMin - haDeg * 4;
+  var setMin = solarNoonMin + haDeg * 4;
+  return {
+    sunrise: new Date(utcMidnight + riseMin * 60000),
+    sunset: new Date(utcMidnight + setMin * 60000)
+  };
+}
+
+// Solar zenith angle (degrees) at a place and moment: < 90 is day, > 90 night,
+// near 90 is the gray line.
+function solarZenith(date, lat, lon) {
+  var eph = solarEphemeris(date);
+  var utcHours = date.getUTCHours() + date.getUTCMinutes() / 60 + date.getUTCSeconds() / 3600;
+  var lstHours = utcHours + lon / 15 + eph.eqTime / 60; // local solar time, hours
+  var H = (lstHours - 12) * 15; // hour angle, degrees
+  var latR = lat * DEG, dR = eph.declination * DEG, HR = H * DEG;
+  var cosZ = Math.sin(latR) * Math.sin(dR) + Math.cos(latR) * Math.cos(dR) * Math.cos(HR);
+  if (cosZ > 1) cosZ = 1;
+  if (cosZ < -1) cosZ = -1;
+  return Math.acos(cosZ) / DEG;
+}
+
+// Coarse region name for a longitude, for describing where the day-night
+// line is crossing. Deliberately rough ("roughly over...").
+function regionForLongitude(lon) {
+  var l = ((lon + 180) % 360 + 360) % 360 - 180;
+  if (l < -150) return "the central Pacific";
+  if (l < -120) return "the eastern Pacific";
+  if (l < -90) return "western North America";
+  if (l < -60) return "eastern North America and the Caribbean";
+  if (l < -30) return "the Atlantic";
+  if (l < 0) return "the eastern Atlantic";
+  if (l < 30) return "Europe and Africa";
+  if (l < 60) return "the Middle East and East Africa";
+  if (l < 90) return "central Asia";
+  if (l < 120) return "East Asia";
+  if (l < 150) return "Southeast Asia and Australia";
+  return "the western Pacific";
+}
+
+// Midpoint of the great circle between two points.
+function greatCircleMidpoint(lat1, lon1, lat2, lon2) {
+  var p1 = lat1 * DEG, p2 = lat2 * DEG;
+  var dLon = (lon2 - lon1) * DEG;
+  var bx = Math.cos(p2) * Math.cos(dLon);
+  var by = Math.cos(p2) * Math.sin(dLon);
+  var midLat = Math.atan2(Math.sin(p1) + Math.sin(p2),
+    Math.sqrt(Math.pow(Math.cos(p1) + bx, 2) + by * by)) / DEG;
+  var midLon = lon1 + Math.atan2(by, Math.cos(p1) + bx) / DEG;
+  while (midLon > 180) midLon -= 360;
+  while (midLon < -180) midLon += 360;
+  return { latitude: midLat, longitude: midLon };
+}
+
+// ---- TLE parsing and satellite passes -----------------------------------
+// nextPass takes the satellite.js implementation as a parameter so the same
+// code runs in the browser (vendored global) and under node (require).
+
+// Parse a CelesTrak TLE text file (groups of name, line 1, line 2) and
+// return the entries whose NORAD id is in `wanted`, keyed by NORAD id.
+function parseTles(text, wanted) {
+  var lines = text.split("\n").map(function (l) { return l.replace(/\r$/, ""); });
+  var found = {};
+  for (var i = 0; i + 2 < lines.length; i++) {
+    var l1 = lines[i + 1], l2 = lines[i + 2];
+    if (!l1 || l1.charAt(0) !== "1" || !l2 || l2.charAt(0) !== "2") continue;
+    var norad = parseInt(l1.substring(2, 7), 10);
+    if (wanted.indexOf(norad) >= 0 && !found[norad]) {
+      found[norad] = { name: lines[i].trim(), l1: l1.trim(), l2: l2.trim() };
+    }
+  }
+  return found;
+}
+
+// Look angles (azimuth, elevation) of a satellite from an observer.
+// satLib supplies propagate/gstime/eciToEcf/geodeticToEcf (all verified);
+// the SEZ conversion here is the standard one, written out because
+// satellite.js v4's ecfToLookAngles takes geodetic coordinates, not ECF,
+// and its azimuth convention is not documented clearly enough to trust.
+// Azimuth is degrees clockwise from north; elevation is degrees above
+// the horizon. Verified against all four cardinal directions.
+function lookAngles(satLib, satrec, date, obs) {
+  var pv;
+  try {
+    pv = satLib.propagate(satrec, date);
+  } catch (e) {
+    return null;
+  }
+  if (!pv || !pv.position) return null;
+  var gmst = satLib.gstime(date);
+  var satEcf = satLib.eciToEcf(pv.position, gmst);
+  var obsEcf = satLib.geodeticToEcf({
+    longitude: obs.lon * DEG, latitude: obs.lat * DEG, height: obs.heightKm
+  });
+  var rx = satEcf.x - obsEcf.x;
+  var ry = satEcf.y - obsEcf.y;
+  var rz = satEcf.z - obsEcf.z;
+  var latR = obs.lat * DEG, lonR = obs.lon * DEG;
+  var sinLat = Math.sin(latR), cosLat = Math.cos(latR);
+  var sinLon = Math.sin(lonR), cosLon = Math.cos(lonR);
+  // Topocentric south, east, zenith components of the range vector.
+  var s = -sinLat * cosLon * rx - sinLat * sinLon * ry + cosLat * rz;
+  var e = -sinLon * rx + cosLon * ry;
+  var z = cosLat * cosLon * rx + cosLat * sinLon * ry + sinLat * rz;
+  var range = Math.sqrt(s * s + e * e + z * z);
+  var el = Math.asin(z / range) / DEG;
+  var az = (Math.atan2(e, -s) / DEG + 360) % 360;
+  return { azimuth: az, elevation: el, rangeKm: range };
+}
+
+// Find the next pass above 10 degrees elevation over `obs`
+// ({lat, lon, heightKm}) within 25 hours of startDate, using satLib
+// (the satellite.js API) and a satrec from twoline2satrec.
+// Returns { found: false } or { found, inProgress, aos, aosAz, maxElDeg,
+// maxElTime, los, losAz } (los null when still up at the window end).
+function nextPass(satLib, satrec, startDate, obs) {
+  var STEP_MS = 30000;
+  var WINDOW_MS = 25 * 3600000;
+  var THRESH = 10; // degrees
+  var inPass = false;
+  var aos = null, aosAz = null, maxEl = -1, maxElTime = null, los = null, losAz = null;
+  var wasUp = false;
+  for (var t = startDate.getTime(); t <= startDate.getTime() + WINDOW_MS; t += STEP_MS) {
+    var date = new Date(t);
+    var look = lookAngles(satLib, satrec, date, obs);
+    if (!look) return null;
+    if (!inPass && look.elevation >= THRESH) {
+      inPass = true;
+      aos = date;
+      aosAz = look.azimuth;
+      maxEl = look.elevation;
+      maxElTime = date;
+      wasUp = (t === startDate.getTime());
+    } else if (inPass) {
+      if (look.elevation > maxEl) { maxEl = look.elevation; maxElTime = date; }
+      if (look.elevation < THRESH) { los = date; losAz = look.azimuth; break; }
+    }
+  }
+  if (!inPass) return { found: false };
+  return {
+    found: true,
+    inProgress: wasUp,
+    aos: aos, aosAz: aosAz,
+    maxElDeg: maxEl, maxElTime: maxElTime,
+    los: los, losAz: losAz
+  };
+}
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    pad: pad, fmtTime: fmtTime, fmtTimeSec: fmtTimeSec, fmtDate: fmtDate,
+    flareClass: flareClass, bandTable: bandTable, bandFromKhz: bandFromKhz,
+    compass: compass, solarEphemeris: solarEphemeris, subsolarPoint: subsolarPoint,
+    sunriseSunset: sunriseSunset, solarZenith: solarZenith,
+    regionForLongitude: regionForLongitude, greatCircleMidpoint: greatCircleMidpoint,
+    parseTles: parseTles, nextPass: nextPass, lookAngles: lookAngles,
+    BAND_ORDER: BAND_ORDER
+  };
+}
+
+</script>
+<script>
+// Accessible HamClock — application code: fetching, rendering, refresh.
+// Pure logic (band table, solar math, flare class) lives in hamclock-lib.js.
+// satellite.js (v4.1.4, MIT, vendored) provides the satellite propagator.
+(function () {
+  "use strict";
+
+  var OBS = { lat: 41.5732, lon: -87.7845, heightKm: 0.22 };
+  var CENTRAL = "America/Chicago";
+
+  var FEEDS = {
+    kIndex: "https://services.swpc.noaa.gov/json/planetary_k_index_1m.json",
+    wwv: "https://services.swpc.noaa.gov/text/wwv.txt",
+    xray: "https://services.swpc.noaa.gov/json/goes/primary/xrays-1-day.json",
+    wind: "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json",
+    mag: "https://services.swpc.noaa.gov/json/rtsw/rtsw_mag_1m.json",
+    solarCycle: "https://services.swpc.noaa.gov/json/solar-cycle/observed-solar-cycle-indices.json",
+    f107: "https://services.swpc.noaa.gov/json/f107_cm_flux.json",
+    dxSpots: "https://www.dxsummit.fi/api/v1/spots",
+    potaSpots: "https://api.pota.app/spot/activator",
+    tleStations: "https://celestrak.org/NORAD/elements/gp.php?GROUP=stations&FORMAT=tle",
+    tleAmateur: "https://celestrak.org/NORAD/elements/gp.php?GROUP=amateur&FORMAT=tle"
+  };
+
+  var SATS = [
+    { norad: 25544, name: "ISS", group: "stations" },
+    { norad: 27607, name: "SO-50", group: "amateur" },
+    { norad: 44909, name: "RS-44", group: "amateur" }
+  ];
+
+  // DX regions for the gray-line path check (target lat/lon from Tinley Park).
+  var DX_TARGETS = [
+    { name: "Europe", lat: 51.5, lon: -0.1 },
+    { name: "East Asia", lat: 35.7, lon: 139.7 },
+    { name: "Oceania", lat: -33.9, lon: 151.2 },
+    { name: "South America", lat: -23.5, lon: -46.6 },
+    { name: "Africa", lat: -33.9, lon: 18.4 }
+  ];
+
+  var state = {
+    kp: null, kpTime: null,
+    flux: null, fluxSource: null, aIndex: null, aDay: null, wwvTime: null,
+    flare: null, flareTime: null,
+    wind: null, windTime: null, bz: null, bzTime: null,
+    ssnMonthly: null, ssnMonth: null,
+    outlookPast: null, outlookNext: null,
+    bands: null,
+    lastGood: {},   // feed name -> Date of last good read
+    feedStatus: {}  // feed name -> { ok: bool, asOf: Date|null, note: string }
+  };
+
+  function $(id) { return document.getElementById(id); }
+
+  function el(id, html) {
+    var n = $(id);
+    if (n) n.innerHTML = html;
+  }
+
+  function esc(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  function ratingSpan(word) {
+    var cls = word === "Good" ? "good" : (word === "Fair" ? "fair" : "poor");
+    return '<span class="' + cls + '">' + word + "</span>";
+  }
+
+  // SWPC time_tag values have no zone suffix; they are UTC. Some feeds
+  // include the Z already. Handle both.
+  function parseFeedTime(tag) {
+    if (!tag) return null;
+    var t = String(tag).trim();
+    var d = new Date(/Z$|[+-]\d{2}:?\d{2}$/.test(t) ? t : t + "Z");
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  function ageText(when) {
+    if (!when) return "";
+    var mins = Math.round((Date.now() - when.getTime()) / 60000);
+    if (mins < 1) return "just now";
+    if (mins < 60) return mins + (mins === 1 ? " minute ago" : " minutes ago");
+    var hrs = Math.floor(mins / 60);
+    return hrs + (hrs === 1 ? " hour ago" : " hours ago");
+  }
+
+  function recordFeed(name, ok, asOf, note) {
+    state.feedStatus[name] = { ok: ok, asOf: asOf || null, note: note || "" };
+    if (ok) state.lastGood[name] = asOf || new Date();
+    renderFeedStatus();
+  }
+
+  function renderFeedStatus() {
+    var order = ["K index", "WWV bulletin", "GOES X-ray", "Solar wind", "Magnetic field",
+      "Solar cycle", "DX Summit spots", "POTA spots", "CelesTrak stations", "CelesTrak amateur"];
+    var html = "";
+    for (var i = 0; i < order.length; i++) {
+      var name = order[i];
+      var s = state.feedStatus[name];
+      if (!s) {
+        html += "<li>" + esc(name) + ": loading…</li>";
+      } else if (s.ok) {
+        html += "<li>" + esc(name) + ": current" +
+          (s.asOf ? " as of " + fmtTime(s.asOf, CENTRAL) + " Central" : "") +
+          (s.note ? " — " + esc(s.note) : "") + "</li>";
+      } else {
+        var last = state.lastGood[name];
+        html += "<li>" + esc(name) + ": not reported" +
+          (last ? " — last good read " + fmtTime(last, CENTRAL) + " Central" : " — no good read yet") +
+          (s.note ? " (" + esc(s.note) + ")" : "") + "</li>";
+      }
+    }
+    el("feed-status", html);
+  }
+
+  // Fetch with a timeout. Returns { ok, status, text } or throws.
+  function fetchText(url, timeoutMs) {
+    timeoutMs = timeoutMs || 15000;
+    if (typeof AbortController === "undefined") {
+      return fetch(url, { cache: "no-store" }).then(function (res) {
+        return res.text().then(function (t) { return { ok: res.ok, status: res.status, text: t }; });
+      });
+    }
+    var ctrl = new AbortController();
+    var timer = setTimeout(function () { ctrl.abort(); }, timeoutMs);
+    return fetch(url, { cache: "no-store", signal: ctrl.signal }).then(function (res) {
+      clearTimeout(timer);
+      return res.text().then(function (t) { return { ok: res.ok, status: res.status, text: t }; });
+    }, function (err) {
+      clearTimeout(timer);
+      throw err;
+    });
+  }
+
+  function fetchJson(url, timeoutMs) {
+    return fetchText(url, timeoutMs).then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return JSON.parse(r.text);
+    });
+  }
+
+  function sleep(ms) {
+    return new Promise(function (resolve) { setTimeout(resolve, ms); });
+  }
+
+  // One retry after a short pause, for flaky feeds (CelesTrak especially).
+  function fetchJsonRetry(url, timeoutMs) {
+    return fetchJson(url, timeoutMs).catch(function (err) {
+      return sleep(2000).then(function () { return fetchJson(url, timeoutMs); });
+    });
+  }
+
+  function fetchTextRetry(url, timeoutMs) {
+    return fetchText(url, timeoutMs).then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.text;
+    }).catch(function (err) {
+      return sleep(2000).then(function () {
+        return fetchText(url, timeoutMs).then(function (r) {
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          return r.text;
+        });
+      });
+    });
+  }
+
+  // Pick the row with the maximum time_tag (the rtsw feeds carry stale tail rows).
+  function maxTimeTagRow(rows) {
+    var best = null, bestTime = -Infinity;
+    for (var i = 0; i < rows.length; i++) {
+      var d = parseFeedTime(rows[i].time_tag);
+      if (d && d.getTime() > bestTime) { bestTime = d.getTime(); best = rows[i]; }
+    }
+    return best;
+  }
+
+  // ---- Clocks ------------------------------------------------------------
+  function tickClocks() {
+    var now = new Date();
+    el("clock-central", fmtTimeSec(now, CENTRAL) + " Central");
+    el("clock-utc", fmtTimeSec(now, "UTC") + " UTC");
+    el("date-line", fmtDate(now, CENTRAL) + " — " + fmtDate(now, "UTC") + " (UTC).");
+  }
+
+  // ---- Solar numbers -----------------------------------------------------
+  function loadKIndex() {
+    return fetchJson(FEEDS.kIndex).then(function (data) {
+      if (!Array.isArray(data) || data.length === 0) throw new Error("empty feed");
+      var last = data[data.length - 1];
+      if (typeof last.estimated_kp !== "number") throw new Error("no estimated_kp");
+      state.kp = last.estimated_kp;
+      state.kpTime = parseFeedTime(last.time_tag);
+      recordFeed("K index", true, state.kpTime);
+    }).catch(function (err) {
+      recordFeed("K index", false, null, "feed unreachable");
+    });
+  }
+
+  function loadWwv() {
+    return fetchText(FEEDS.wwv).then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      var text = r.text;
+      var issued = text.match(/:Issued:\s*(.+)/);
+      state.wwvTime = issued ? new Date(issued[1].trim() + " UTC") : null;
+      if (state.wwvTime && isNaN(state.wwvTime.getTime())) state.wwvTime = null;
+      var m = text.match(/Solar flux (\d+) and estimated planetary A-index (\d+)/);
+      if (!m) throw new Error("flux/A line not found");
+      state.flux = parseInt(m[1], 10);
+      state.fluxSource = "wwv";
+      state.aIndex = parseInt(m[2], 10);
+      var day = text.match(/indices for (\d+ \w+) follow/);
+      state.aDay = day ? day[1] : null;
+      // Outlook: the past-24h block runs from after the K-index line to the
+      // next-24h line; the next-24h block runs from there to the end.
+      var lines = text.split("\n").map(function (l) { return l.trim(); }).filter(function (l) { return l.length > 0; });
+      var pastIdx = -1, nextIdx = -1;
+      for (var i = 0; i < lines.length; i++) {
+        if (pastIdx < 0 && /past 24 hours/.test(lines[i])) pastIdx = i;
+        if (/next 24 hours/.test(lines[i])) nextIdx = i;
+      }
+      if (pastIdx >= 0) {
+        var end = nextIdx >= 0 ? nextIdx : lines.length;
+        state.outlookPast = lines.slice(pastIdx, end).join(" ");
+      }
+      if (nextIdx >= 0) state.outlookNext = lines.slice(nextIdx).join(" ");
+      recordFeed("WWV bulletin", true, state.wwvTime);
+    }).catch(function (err) {
+      recordFeed("WWV bulletin", false, null, "feed unreachable");
+    });
+  }
+
+  // F10.7 JSON is the flux fallback only when WWV fails. Note its latest
+  // reading is the afternoon observation, which can differ from the WWV
+  // daily value, so it is labeled as the latest observed reading.
+  function loadF107Fallback() {
+    if (state.flux !== null) return Promise.resolve();
+    return fetchJson(FEEDS.f107).then(function (data) {
+      if (!Array.isArray(data) || data.length === 0) throw new Error("empty feed");
+      var best = maxTimeTagRow(data);
+      if (!best || typeof best.flux !== "number") throw new Error("no flux value");
+      state.flux = Math.round(best.flux);
+      state.fluxSource = "f107";
+    }).catch(function () { /* stays not reported */ });
+  }
+
+  function loadXray() {
+    return fetchJson(FEEDS.xray).then(function (data) {
+      if (!Array.isArray(data) || data.length === 0) throw new Error("empty feed");
+      var rows = data.filter(function (r) { return r.energy === "0.1-0.8nm"; });
+      var best = maxTimeTagRow(rows);
+      if (!best || typeof best.flux !== "number") throw new Error("no flux value");
+      var fc = flareClass(best.flux);
+      if (!fc.label) throw new Error("bad flux value");
+      state.flare = fc;
+      state.flareTime = parseFeedTime(best.time_tag);
+      recordFeed("GOES X-ray", true, state.flareTime);
+    }).catch(function (err) {
+      recordFeed("GOES X-ray", false, null, "feed unreachable");
+    });
+  }
+
+  function loadWind() {
+    return fetchJson(FEEDS.wind).then(function (data) {
+      if (!Array.isArray(data) || data.length === 0) throw new Error("empty feed");
+      var best = maxTimeTagRow(data);
+      if (!best || typeof best.proton_speed !== "number") throw new Error("no wind value");
+      state.wind = Math.round(best.proton_speed);
+      state.windTime = parseFeedTime(best.time_tag);
+      recordFeed("Solar wind", true, state.windTime);
+    }).catch(function (err) {
+      recordFeed("Solar wind", false, null, "feed unreachable");
+    });
+  }
+
+  function loadMag() {
+    return fetchJson(FEEDS.mag).then(function (data) {
+      if (!Array.isArray(data) || data.length === 0) throw new Error("empty feed");
+      var best = maxTimeTagRow(data);
+      if (!best || typeof best.bz_gsm !== "number") throw new Error("no Bz value");
+      state.bz = Math.round(best.bz_gsm * 10) / 10;
+      state.bzTime = parseFeedTime(best.time_tag);
+      recordFeed("Magnetic field", true, state.bzTime);
+    }).catch(function (err) {
+      recordFeed("Magnetic field", false, null, "feed unreachable");
+    });
+  }
+
+  function loadSolarCycle() {
+    return fetchJson(FEEDS.solarCycle).then(function (data) {
+      if (!Array.isArray(data) || data.length === 0) throw new Error("empty feed");
+      var best = null;
+      for (var i = data.length - 1; i >= 0; i--) {
+        var v = data[i].observed_swpc_ssn;
+        if (typeof v === "number" && v >= 0) { best = data[i]; break; }
+      }
+      if (!best) throw new Error("no monthly value");
+      state.ssnMonthly = Math.round(best.observed_swpc_ssn);
+      var tag = String(best["time-tag"] || "");
+      var parts = tag.split("-");
+      var months = ["January", "February", "March", "April", "May", "June", "July",
+        "August", "September", "October", "November", "December"];
+      state.ssnMonth = parts.length === 2
+        ? months[parseInt(parts[1], 10) - 1] + " " + parts[0]
+        : tag;
+      recordFeed("Solar cycle", true, null, "monthly figures");
+    }).catch(function (err) {
+      recordFeed("Solar cycle", false, null, "feed unreachable");
+    });
+  }
+
+  function kLabel(kp) {
+    if (kp >= 5) return { word: "POOR", cls: "poor", text: "storm" };
+    if (kp >= 4) return { word: "FAIR", cls: "fair", text: "unsettled" };
+    return { word: "GOOD", cls: "good", text: "quiet" };
+  }
+
+  function renderNumbers() {
+    if (state.kp !== null) {
+      var kl = kLabel(state.kp);
+      el("num-k", "K index: <strong>" + state.kp.toFixed(1) + "</strong> — " +
+        '<span class="' + kl.cls + '">' + kl.word + " — " + kl.text + "</span>");
+    } else {
+      el("num-k", "K index: <span class=\"notrep\">not reported — the K index feed is not available.</span>");
+    }
+    if (state.flux !== null) {
+      var src = state.fluxSource === "f107" ? " (latest observed reading; the WWV bulletin is not available)" : "";
+      el("num-flux", "Solar flux: <strong>" + state.flux + "</strong>" + src);
+    } else {
+      el("num-flux", "Solar flux: <span class=\"notrep\">not reported.</span>");
+    }
+    if (state.aIndex !== null) {
+      el("num-a", "A index: <strong>" + state.aIndex + "</strong>" +
+        (state.aDay ? " for " + esc(state.aDay) + "." : ""));
+    } else {
+      el("num-a", "A index: <span class=\"notrep\">not reported.</span>");
+    }
+    if (state.flare) {
+      var fn = state.flare.note === "quiet" ? "quiet" : (state.flare.note === "moderate" ? "moderate" : "active — flares in progress");
+      el("num-flare", "Flare class: <strong>" + esc(state.flare.label) + "</strong> — " + fn + ".");
+    } else {
+      el("num-flare", "Flare class: <span class=\"notrep\">not reported.</span>");
+    }
+    if (state.wind !== null) {
+      var stream = state.wind < 450 ? "slow solar wind" : (state.wind <= 600 ? "moderate solar wind" : "fast stream");
+      el("num-wind", "Solar wind: <strong>" + state.wind + " km/s</strong> — " + stream + ".");
+    } else {
+      el("num-wind", "Solar wind: <span class=\"notrep\">not reported.</span>");
+    }
+    if (state.bz !== null) {
+      var dir, meaning;
+      if (state.bz <= -0.3) {
+        dir = "southward";
+        meaning = "Southward Bz couples into Earth&rsquo;s magnetic field and can unsettle conditions.";
+      } else if (state.bz >= 0.3) {
+        dir = "northward";
+        meaning = "Northward Bz couples weakly, so conditions stay steadier.";
+      } else {
+        dir = "near-neutral";
+        meaning = "Near-neutral Bz means weak coupling.";
+      }
+      var sign = state.bz > 0 ? "+" : "";
+      el("num-bz", "Bz: <strong>" + sign + state.bz.toFixed(1) + " " + dir + "</strong> — " + meaning);
+    } else {
+      el("num-bz", "Bz: <span class=\"notrep\">not reported.</span>");
+    }
+    if (state.ssnMonthly !== null) {
+      el("num-ssn-monthly", "Sunspot number, monthly average: <strong>about " + state.ssnMonthly +
+        (state.ssnMonth ? " (" + esc(state.ssnMonth) + ")" : "") +
+        "</strong>. This is the monthly average, not today&rsquo;s count — the daily number is in the group&rsquo;s hourly conditions post.");
+    } else {
+      el("num-ssn-monthly", "Sunspot number, monthly average: <span class=\"notrep\">not reported.</span>");
+    }
+    var asof = [];
+    if (state.kpTime) asof.push("K index as of " + fmtTime(state.kpTime, CENTRAL) + " Central");
+    if (state.wwvTime) asof.push("WWV bulletin issued " + fmtTime(state.wwvTime, "UTC") + " UTC");
+    el("numbers-asof", asof.length ? asof.join("; ") + "." : "No solar numbers loaded yet.");
+
+    if (state.outlookPast) el("outlook-past", "Past 24 hours: " + esc(state.outlookPast));
+    else el("outlook-past", "Past 24 hours: <span class=\"notrep\">not reported — the WWV bulletin is not available.</span>");
+    if (state.outlookNext) el("outlook-next", "Next 24 hours: " + esc(state.outlookNext));
+    else el("outlook-next", "Next 24 hours: <span class=\"notrep\">not reported — the WWV bulletin is not available.</span>");
+  }
+
+  function renderBands() {
+    if (state.flux === null || state.kp === null) {
+      el("band-rows", '<tr><td colspan="3">Not reported — the band table needs solar flux and K index, and one of them is not available.</td></tr>');
+      el("bands-asof", "Band table not available.");
+      state.bands = null;
+      return;
+    }
+    state.bands = bandTable(state.flux, state.kp);
+    var html = "";
+    for (var i = 0; i < BAND_ORDER.length; i++) {
+      var b = BAND_ORDER[i];
+      html += "<tr><th scope=\"row\">" + b + " meters</th><td>" + ratingSpan(state.bands[b][0]) +
+        "</td><td>" + ratingSpan(state.bands[b][1]) + "</td></tr>";
+    }
+    el("band-rows", html);
+    el("bands-asof", "From solar flux " + state.flux + " and K index " + state.kp.toFixed(1) + ".");
+  }
+
+  function renderSummary() {
+    if (!state.bands || state.kp === null) {
+      el("summary-text", "Current conditions data is not available right now. The group&rsquo;s hourly conditions post in the Propagation guide has the latest numbers.");
+      return;
+    }
+    var s1;
+    if (state.kp >= 5) {
+      s1 = "A geomagnetic storm is in progress (K " + state.kp.toFixed(1) + "). Expect disturbed conditions on most bands.";
+    } else if (state.kp >= 4) {
+      s1 = "Conditions are unsettled (K " + state.kp.toFixed(1) + ").";
+    } else {
+      s1 = "Conditions are quiet (K " + state.kp.toFixed(1) + ").";
+    }
+    var goodDay = [], goodNight = [], poorBoth = [];
+    for (var i = 0; i < BAND_ORDER.length; i++) {
+      var b = BAND_ORDER[i];
+      if (state.bands[b][0] === "Good") goodDay.push(b + " meters");
+      if (state.bands[b][1] === "Good") goodNight.push(b + " meters");
+      if (state.bands[b][0] === "Poor" && state.bands[b][1] === "Poor") poorBoth.push(b + " meters");
+    }
+    var s2;
+    if (goodDay.length === 0 && goodNight.length === 0) {
+      s2 = "No band is rated good right now; 40 and 80 meters are the fair fallback.";
+    } else {
+      var parts = [];
+      if (goodDay.length) parts.push("good by day: " + goodDay.join(", "));
+      if (goodNight.length) parts.push("good at night: " + goodNight.join(", "));
+      s2 = "The reliable bands are " + parts.join("; ") + ".";
+    }
+    var s3 = "";
+    if (poorBoth.length) s3 = "Poor day and night: " + poorBoth.join(", ") + ".";
+    el("summary-text", s1 + " " + s2 + (s3 ? " " + s3 : ""));
+  }
+
+  function loadSolar() {
+    return Promise.all([
+      loadKIndex(), loadWwv(), loadXray(), loadWind(), loadMag(), loadSolarCycle()
+    ]).then(function () {
+      return loadF107Fallback();
+    }).then(function () {
+      renderNumbers();
+      renderBands();
+      renderSummary();
+    });
+  }
+
+  // ---- Gray line ---------------------------------------------------------
+  function renderGrayLine() {
+    var now = new Date();
+    var ss = sunriseSunset(now, OBS.lat, OBS.lon);
+    if (ss.sunrise && ss.sunset) {
+      el("gray-sun", "Sunrise <strong>" + fmtTime(ss.sunrise, CENTRAL) +
+        " Central</strong>, sunset <strong>" + fmtTime(ss.sunset, CENTRAL) + " Central</strong> today.");
+    } else {
+      el("gray-sun", "Sunrise and sunset: <span class=\"notrep\">not reported.</span>");
+    }
+    var sub = subsolarPoint(now);
+    var latHem = sub.latitude >= 0 ? "north" : "south";
+    var lonHem = sub.longitude >= 0 ? "east" : "west";
+    el("gray-subsolar", "The sun is directly over <strong>" +
+      Math.abs(sub.latitude).toFixed(1) + "° " + latHem + ", " +
+      Math.abs(sub.longitude).toFixed(1) + "° " + lonHem + "</strong> right now.");
+    var eveningLon = sub.longitude + 90; // sunset line (evening terminator)
+    var morningLon = sub.longitude - 90; // sunrise line (morning terminator)
+    el("gray-terminator", "The day-night line is crossing roughly over <strong>" +
+      regionForLongitude(eveningLon) + "</strong> (where the sun is setting) and <strong>" +
+      regionForLongitude(morningLon) + "</strong> (where the sun is rising).");
+    var onGray = [];
+    for (var i = 0; i < DX_TARGETS.length; i++) {
+      var t = DX_TARGETS[i];
+      var mid = greatCircleMidpoint(OBS.lat, OBS.lon, t.lat, t.lon);
+      var z = solarZenith(now, mid.latitude, mid.longitude);
+      if (z >= 80 && z <= 100) onGray.push(t.name);
+    }
+    if (onGray.length) {
+      el("gray-paths", "Paths on the gray line right now: <strong>" + onGray.join(", ") + "</strong>.");
+    } else {
+      el("gray-paths", "No major DX path is on the gray line right now.");
+    }
+  }
+
+  // ---- Satellite passes (parseTles and nextPass live in hamclock-lib.js) --
+  function renderSatellites(results) {
+    var html = "";
+    for (var i = 0; i < SATS.length; i++) {
+      var sat = SATS[i];
+      var r = results[sat.norad];
+      html += '<div class="sat-block"><h3>' + esc(sat.name) + "</h3>";
+      if (!r) {
+        html += "<p>Not reported — the TLE feed for this satellite is not available.</p>";
+      } else if (!r.found) {
+        html += "<p>No pass above 10° in the next 24 hours.</p>";
+      } else {
+        var p = r.pass;
+        if (p.inProgress) {
+          html += "<p><strong>Up right now.</strong> Highest <strong>" +
+            Math.round(p.maxElDeg) + "° at " + fmtTime(p.maxElTime, CENTRAL) + " Central</strong>" +
+            (p.los ? ", sets <strong>" + fmtTime(p.los, CENTRAL) + " Central</strong> in the " +
+              compass(p.losAz) + "." : ", and still up at the end of the 24-hour window.") + "</p>";
+        } else {
+          html += "<p>Rises <strong>" + fmtTime(p.aos, CENTRAL) + " Central</strong> in the " +
+            compass(p.aosAz) + ", highest <strong>" + Math.round(p.maxElDeg) + "° at " +
+            fmtTime(p.maxElTime, CENTRAL) + " Central</strong>" +
+            (p.los ? ", sets <strong>" + fmtTime(p.los, CENTRAL) + " Central</strong> in the " +
+              compass(p.losAz) + "." : ", and still up at the end of the 24-hour window.") + "</p>";
+        }
+      }
+      html += "</div>";
+    }
+    el("sat-list", html);
+  }
+
+  function loadSatellites() {
+    if (typeof satellite === "undefined") {
+      el("sat-list", "<p>Not reported — the satellite calculator did not load.</p>");
+      el("sat-asof", "Satellite passes not available.");
+      return Promise.resolve();
+    }
+    var now = new Date();
+    var results = {};
+    var asofParts = [];
+    function loadGroup(url, feedName, wantedNorads) {
+      return fetchTextRetry(url, 15000).then(function (text) {
+        var tles = parseTles(text, wantedNorads);
+        var foundAny = false;
+        for (var i = 0; i < wantedNorads.length; i++) {
+          var norad = wantedNorads[i];
+          if (!tles[norad]) continue;
+          foundAny = true;
           try {
-            var parts = new Intl.DateTimeFormat("en-GB", {
-              timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false
-            }).formatToParts(date);
-            var h = "00", m = "00";
-            for (var i = 0; i < parts.length; i++) {
-              if (parts[i].type === "hour") h = parts[i].value;
-              if (parts[i].type === "minute") m = parts[i].value;
-            }
-            if (h === "24") h = "00";
-            return h + ":" + m;
+            var satrec = satellite.twoline2satrec(tles[norad].l1, tles[norad].l2);
+            var pass = nextPass(satellite, satrec, now, OBS);
+            if (pass) results[norad] = { found: pass.found, pass: pass };
           } catch (e) {
-            return pad(date.getUTCHours()) + ":" + pad(date.getUTCMinutes());
+            results[norad] = null;
           }
         }
+        recordFeed(feedName, foundAny, now, foundAny ? "" : "satellite not in file");
+        if (foundAny) asofParts.push(feedName + " current");
+      }).catch(function () {
+        recordFeed(feedName, false, null, "feed unreachable");
+      });
+    }
+    var stationsIds = SATS.filter(function (s) { return s.group === "stations"; }).map(function (s) { return s.norad; });
+    var amateurIds = SATS.filter(function (s) { return s.group === "amateur"; }).map(function (s) { return s.norad; });
+    return Promise.all([
+      loadGroup(FEEDS.tleStations, "CelesTrak stations", stationsIds),
+      loadGroup(FEEDS.tleAmateur, "CelesTrak amateur", amateurIds)
+    ]).then(function () {
+      renderSatellites(results);
+      el("sat-asof", asofParts.length
+        ? "Passes computed " + fmtTime(now, CENTRAL) + " Central (" + asofParts.join("; ") + ")."
+        : "Satellite passes not available — the TLE feeds are not reachable.");
+    });
+  }
 
-        function fmtDate(date, tz) {
-          try {
-            return new Intl.DateTimeFormat("en-US", {
-              timeZone: tz, weekday: "long", year: "numeric", month: "long", day: "numeric"
-            }).format(date);
-          } catch (e) {
-            return date.toUTCString();
-          }
-        }
+  // ---- Spots ---------------------------------------------------------------
+  function loadDxSpots() {
+    return fetchJsonRetry(FEEDS.dxSpots, 15000).then(function (data) {
+      if (!Array.isArray(data) || data.length === 0) throw new Error("empty feed");
+      var spots = data.slice(0, 10);
+      var html = "";
+      for (var i = 0; i < spots.length; i++) {
+        var s = spots[i];
+        var when = parseFeedTime(s.time);
+        var band = bandFromKhz(s.frequency);
+        var mhz = (s.frequency / 1000).toFixed(3);
+        html += "<li><span class=\"spot-call\">" + esc(s.dx_call || "?") + "</span> — " +
+          (band ? esc(band) + ", " : "") + mhz + " MHz" +
+          (s.dx_country ? ", " + esc(s.dx_country) : "") + ".<br />" +
+          '<span class="spot-meta">Spotted by ' + esc(s.de_call || "?") +
+          (when ? " at " + fmtTime(when, CENTRAL) + " Central (" + ageText(when) + ")" : "") +
+          (s.info ? ". Note: " + esc(s.info) : "") + "</span></li>";
+      }
+      el("dx-list", html);
+      var newest = spots.length ? parseFeedTime(spots[0].time) : null;
+      el("dx-asof", newest ? "Newest spot " + fmtTime(newest, CENTRAL) + " Central." : "Spots loaded.");
+      recordFeed("DX Summit spots", true, newest);
+    }).catch(function () {
+      el("dx-list", "<li>Not reported — the DX Summit feed is not available.</li>");
+      el("dx-asof", "DX spots not available.");
+      recordFeed("DX Summit spots", false, null, "feed unreachable");
+    });
+  }
 
-        // ---- Diagnostics -------------------------------------------------
-        // Every fetch step appends a timestamped line to the on-page log and
-        // mirrors it to the console, so a failure on any device can be read
-        // off the page itself — no dev tools needed.
-        var attemptCount = 0;
+  function loadPotaSpots() {
+    return fetchJsonRetry(FEEDS.potaSpots, 15000).then(function (data) {
+      if (!Array.isArray(data) || data.length === 0) throw new Error("empty feed");
+      var spots = data.slice(0, 8);
+      var html = "";
+      for (var i = 0; i < spots.length; i++) {
+        var s = spots[i];
+        var when = parseFeedTime(s.spotTime);
+        var freq = parseFloat(s.frequency);
+        var mhz = isNaN(freq) ? null : (freq / 1000).toFixed(3);
+        html += "<li><span class=\"spot-call\">" + esc(s.activator || "?") + "</span> at " +
+          esc(s.reference || "?") +
+          (s.name ? ", " + esc(s.name) : "") +
+          (s.locationDesc ? " (" + esc(s.locationDesc) + ")" : "") + " — " +
+          (mhz ? mhz + " MHz " : "") + esc(s.mode || "") + ".<br />" +
+          '<span class="spot-meta">Spotted by ' + esc(s.spotter || "?") +
+          (when ? " at " + fmtTime(when, CENTRAL) + " Central (" + ageText(when) + ")" : "") +
+          (s.comments ? ". " + esc(s.comments) : "") + "</span></li>";
+      }
+      el("pota-list", html);
+      var newest = spots.length ? parseFeedTime(spots[0].spotTime) : null;
+      el("pota-asof", newest ? "Newest spot " + fmtTime(newest, CENTRAL) + " Central." : "Spots loaded.");
+      recordFeed("POTA spots", true, newest);
+    }).catch(function () {
+      el("pota-list", "<li>Not reported — the POTA feed is not available.</li>");
+      el("pota-asof", "POTA spots not available.");
+      recordFeed("POTA spots", false, null, "feed unreachable");
+    });
+  }
 
-        function stamp() {
-          var now = new Date();
-          return fmtTime(now, "America/Chicago") + ":" + pad(now.getSeconds()) + " Central";
-        }
+  function loadSpots() {
+    return Promise.all([loadDxSpots(), loadPotaSpots()]);
+  }
 
-        function logLine(text) {
-          var line = stamp() + " — " + text;
-          diagLogEl.textContent = line + "\n" + diagLogEl.textContent;
-          if (window.console && console.log) console.log("[hamclock-diag] " + line);
-        }
+  // ---- Refresh orchestration -----------------------------------------------
+  var refreshing = false;
 
-        function describeError(err) {
-          if (!err) return "unknown error (no error object)";
-          var name = err.name || "Error";
-          var msg = err.message || String(err);
-          return name + ": " + msg;
-        }
+  function announceRefresh() {
+    var failed = [];
+    var names = Object.keys(state.feedStatus);
+    for (var i = 0; i < names.length; i++) {
+      if (!state.feedStatus[names[i]].ok) failed.push(names[i]);
+    }
+    var now = new Date();
+    var msg = "Refreshed " + fmtTime(now, CENTRAL) + " Central — ";
+    if (failed.length === 0) msg += "all feeds current.";
+    else if (failed.length === 1) msg += failed[0] + " not available.";
+    else msg += failed.length + " feeds not available: " + failed.join(", ") + ".";
+    el("status", msg);
+  }
 
-        function recordError(where, err) {
-          var text = describeError(err);
-          diagErrorEl.textContent = where + " — " + text;
-          diagErrorEl.className = "bad";
-          logLine("FAILED at " + where + " — " + text);
-          return text;
-        }
+  function refreshAll(manual) {
+    if (refreshing) return Promise.resolve();
+    refreshing = true;
+    var btn = $("refresh-btn");
+    if (btn) btn.disabled = true;
+    el("status", "Refreshing…");
+    renderGrayLine();
+    return Promise.all([loadSolar(), loadSpots(), loadSatellites()]).then(function () {
+      refreshing = false;
+      if (btn) btn.disabled = false;
+      announceRefresh();
+    }).catch(function () {
+      refreshing = false;
+      if (btn) btn.disabled = false;
+      announceRefresh();
+    });
+  }
 
-        function setResult(el, ok, text) {
-          el.textContent = text;
-          el.className = ok === true ? "ok" : (ok === false ? "bad" : "info");
-        }
+  // ---- Init ------------------------------------------------------------------
+  tickClocks();
+  setInterval(tickClocks, 1000);
+  renderFeedStatus();
+  renderGrayLine();
+  refreshAll(false);
 
-        function handleData(data, via) {
-          if (!Array.isArray(data) || data.length === 0) {
-            logLine(via + " returned JSON, but it was not a non-empty list of readings.");
-            showNotReported("K index not available — the feed returned no readings.");
-            return false;
-          }
-          var last = data[data.length - 1];
-          if (!last || typeof last.kp_index !== "number" || !last.time_tag) {
-            logLine(via + " returned " + data.length + " entries, but the latest entry was incomplete (kp_index/time_tag missing).");
-            showNotReported("K index not available — the latest feed entry was incomplete.");
-            return false;
-          }
-          logLine(via + " OK — " + data.length + " entries; latest K " + last.kp_index + " at feed time " + last.time_tag + " UTC.");
-          showReading(last);
-          return true;
-        }
+  // Auto-refresh: spots every 15 minutes, solar and band data hourly,
+  // gray line hourly, satellite passes every 6 hours.
+  setInterval(function () { loadSpots().then(announceRefresh); }, 15 * 60 * 1000);
+  setInterval(function () { loadSolar().then(announceRefresh); }, 60 * 60 * 1000);
+  setInterval(renderGrayLine, 60 * 60 * 1000);
+  setInterval(function () { loadSatellites().then(announceRefresh); }, 6 * 60 * 60 * 1000);
 
-        function showNotReported(announceText) {
-          valueEl.textContent = "K index not reported";
-          valueEl.className = "k-value unknown";
-          labelEl.textContent = "";
-          detailEl.textContent = "";
-          asOfEl.textContent = "Data as of: not reported — the feed returned no usable reading.";
-          statusEl.textContent = announceText;
-        }
+  var refreshBtn = $("refresh-btn");
+  if (refreshBtn) refreshBtn.addEventListener("click", function () { refreshAll(true); });
+})();
 
-        function showReading(entry) {
-          var kp = entry.kp_index;
-          var est = (typeof entry.estimated_kp === "number") ? entry.estimated_kp : null;
-          // time_tag from the feed is UTC with no zone suffix; treat it as UTC.
-          var when = new Date(entry.time_tag + "Z");
-          var validTime = !isNaN(when.getTime());
-
-          valueEl.textContent = "K " + kp;
-          var cls = "k-value", word;
-          if (kp >= 5) { cls += " poor"; word = "POOR — geomagnetic storm"; }
-          else if (kp === 4) { cls += " fair"; word = "FAIR — unsettled"; }
-          else { cls += ""; word = "GOOD — quiet"; }
-          valueEl.className = cls;
-          labelEl.textContent = word;
-
-          detailEl.textContent = est !== null
-            ? "Estimated K for this minute: " + est.toFixed(2) + "."
-            : "";
-
-          if (validTime) {
-            asOfEl.innerHTML = "";
-            var strong = document.createElement("strong");
-            strong.textContent = fmtTime(when, "America/Chicago") + " Central / " +
-              fmtTime(when, "UTC") + " UTC";
-            asOfEl.appendChild(document.createTextNode("Data as of "));
-            asOfEl.appendChild(strong);
-            asOfEl.appendChild(document.createTextNode(", " + fmtDate(when, "America/Chicago") + " (feed time)."));
-          } else {
-            asOfEl.textContent = "Data as of: the feed gave a reading with no usable time.";
-          }
-
-          var now = new Date();
-          statusEl.textContent = "Refreshed " + fmtTime(now, "America/Chicago") +
-            " Central, K index current — K " + kp + ", " + word.split(" — ")[1] + ".";
-        }
-
-        // Attempt 2: same feed via XMLHttpRequest. If fetch() fails but XHR
-        // succeeds, the block is specific to fetch(); if both fail the same
-        // way, the block sits below both — hosting policy or network egress.
-        function tryXhr(startedAt) {
-          setResult(diagXhrEl, null, "running…");
-          logLine("Attempt 2 (XMLHttpRequest) started.");
-          var xhr = new XMLHttpRequest();
-          xhr.open("GET", FEED_URL, true);
-          xhr.onreadystatechange = function () {
-            if (xhr.readyState !== 4) return;
-            var ms = Date.now() - startedAt;
-            if (xhr.status >= 200 && xhr.status < 300) {
-              setResult(diagXhrEl, true, "HTTP " + xhr.status + " in " + ms + " ms — response received");
-              logLine("Attempt 2 got HTTP " + xhr.status + " in " + ms + " ms; parsing JSON (" + xhr.responseText.length + " characters).");
-              var data;
-              try {
-                data = JSON.parse(xhr.responseText);
-              } catch (e) {
-                recordError("Attempt 2 JSON parse", e);
-                setResult(diagXhrEl, false, "HTTP " + xhr.status + " but the body was not valid JSON");
-                finish(false);
-                return;
-              }
-              finish(handleData(data, "Attempt 2 (XMLHttpRequest)"));
-            } else {
-              var detail = "HTTP status " + xhr.status + " in " + ms + " ms (status 0 means the request never reached the server — blocked before or during the connection)";
-              setResult(diagXhrEl, false, detail);
-              diagErrorEl.textContent = "Attempt 2 (XMLHttpRequest) — " + detail;
-              diagErrorEl.className = "bad";
-              logLine("FAILED at Attempt 2 — " + detail + ".");
-              finish(false);
-            }
-          };
-          xhr.onerror = function () {
-            var ms = Date.now() - startedAt;
-            var detail = "network error event after " + ms + " ms, HTTP status " + xhr.status;
-            setResult(diagXhrEl, false, detail);
-            diagErrorEl.textContent = "Attempt 2 (XMLHttpRequest) — " + detail;
-            diagErrorEl.className = "bad";
-            logLine("FAILED at Attempt 2 — " + detail + ".");
-            finish(false);
-          };
-          xhr.send(null);
-        }
-
-        function finish(ok) {
-          btn.disabled = false;
-          if (!ok) {
-            showNotReported("K index not available — both fetch methods failed. The exact errors are in the Fetch diagnostics section below. Check your connection and press Refresh to try again.");
-          }
-          logLine("Refresh cycle finished: " + (ok ? "K index loaded." : "no reading loaded — see errors above."));
-        }
-
-        function load() {
-          attemptCount++;
-          btn.disabled = true;
-          statusEl.textContent = "Refreshing…";
-          diagOnlineEl.textContent = navigator.onLine ? "yes" : "no — the browser reports it is offline";
-          diagOnlineEl.className = navigator.onLine ? "ok" : "bad";
-          logLine("Refresh #" + attemptCount + " started. Browser online: " + (navigator.onLine ? "yes" : "no") + ". Requesting " + FEED_URL);
-          setResult(diagFetchEl, null, "running…");
-          var startedAt = Date.now();
-          fetch(FEED_URL, { cache: "no-store" })
-            .then(function (res) {
-              var ms = Date.now() - startedAt;
-              logLine("Attempt 1 (fetch) got a response in " + ms + " ms — HTTP " + res.status + " " + (res.statusText || "") + ", response type \"" + res.type + "\" (\"opaque\" would mean the response was blocked by CORS).");
-              if (!res.ok) {
-                setResult(diagFetchEl, false, "HTTP " + res.status + " " + (res.statusText || "") + " in " + ms + " ms");
-                recordError("Attempt 1 HTTP response", new Error("HTTP " + res.status + " " + (res.statusText || "")));
-                throw new Error("http-not-ok");
-              }
-              setResult(diagFetchEl, true, "HTTP " + res.status + " in " + ms + " ms — now reading the JSON body");
-              return res.json().then(function (data) {
-                setResult(diagFetchEl, true, "HTTP " + res.status + " in " + ms + " ms — JSON body read OK");
-                return data;
-              }, function (err) {
-                recordError("Attempt 1 JSON parse", err);
-                throw err;
-              });
-            })
-            .then(function (data) {
-              if (handleData(data, "Attempt 1 (fetch)")) {
-                setResult(diagXhrEl, null, "not needed — fetch() succeeded");
-                finish(true);
-              } else {
-                tryXhr(Date.now());
-              }
-            })
-            .catch(function (err) {
-              if (err && err.message === "http-not-ok") {
-                // Already logged above; still cross-check with XHR.
-              } else {
-                setResult(diagFetchEl, false, "failed — " + describeError(err));
-                recordError("Attempt 1 (fetch)", err);
-              }
-              logLine("Falling back to Attempt 2 (XMLHttpRequest) to cross-check.");
-              tryXhr(Date.now());
-            });
-        }
-
-        // Page-level facts, filled in once at load.
-        var originText;
-        try {
-          originText = window.location.origin || (window.location.protocol + "//" + window.location.host);
-        } catch (e) {
-          originText = "unreadable (" + describeError(e) + ")";
-        }
-        if (!originText || originText === "null") {
-          originText = String(originText) + " — an opaque origin; cross-origin fetches from opaque origins are commonly blocked";
-        }
-        diagOriginEl.textContent = originText + " (protocol: " + window.location.protocol + ")";
-        logLine("Page loaded. Origin: " + originText + ". User agent: " + navigator.userAgent);
-
-        btn.addEventListener("click", load);
-        load();
-      })();
-    </script>
-  </body>
+</script>
+</body>
 </html>
