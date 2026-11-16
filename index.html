@@ -479,6 +479,23 @@ function subsolarPoint(date) {
   return { latitude: eph.declination, longitude: lon };
 }
 
+// The UTC date containing local noon is not always the local calendar
+// date: after 18:00 Central the UTC date is already tomorrow. Sunrise and
+// sunset are quoted for the Central calendar date, so build a reference
+// moment at noon UTC on the current Central date.
+function centralDayReference(now) {
+  var parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Chicago", year: "numeric", month: "numeric", day: "numeric"
+  }).formatToParts(now);
+  var y = 0, m = 0, d = 0;
+  for (var i = 0; i < parts.length; i++) {
+    if (parts[i].type === "year") y = parseInt(parts[i].value, 10);
+    if (parts[i].type === "month") m = parseInt(parts[i].value, 10);
+    if (parts[i].type === "day") d = parseInt(parts[i].value, 10);
+  }
+  return new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+}
+
 // Sunrise and sunset (UTC Date objects) for a latitude/longitude on the
 // UTC date containing local noon at that longitude. Returns nulls when the
 // sun never rises or never sets that day.
@@ -649,6 +666,7 @@ if (typeof module !== "undefined" && module.exports) {
     sunriseSunset: sunriseSunset, solarZenith: solarZenith,
     regionForLongitude: regionForLongitude, greatCircleMidpoint: greatCircleMidpoint,
     parseTles: parseTles, nextPass: nextPass, lookAngles: lookAngles,
+    centralDayReference: centralDayReference,
     BAND_ORDER: BAND_ORDER
   };
 }
@@ -675,7 +693,11 @@ if (typeof module !== "undefined" && module.exports) {
     dxSpots: "https://www.dxsummit.fi/api/v1/spots",
     potaSpots: "https://api.pota.app/spot/activator",
     tleStations: "https://celestrak.org/NORAD/elements/gp.php?GROUP=stations&FORMAT=tle",
-    tleAmateur: "https://celestrak.org/NORAD/elements/gp.php?GROUP=amateur&FORMAT=tle"
+    tleAmateur: "https://celestrak.org/NORAD/elements/gp.php?GROUP=amateur&FORMAT=tle",
+    // Backup TLE source, one satellite per request, used only when a
+    // CelesTrak group fetch fails. Verified CORS-open 2026-11-15; its TLEs
+    // match CelesTrak's (same source data).
+    tleBackup: "https://tle.ivanstanojevic.me/api/tle/"
   };
 
   var SATS = [
@@ -798,24 +820,26 @@ if (typeof module !== "undefined" && module.exports) {
     return new Promise(function (resolve) { setTimeout(resolve, ms); });
   }
 
-  // One retry after a short pause, for flaky feeds (CelesTrak especially).
+  // Three attempts with backoff, for flaky feeds (CelesTrak especially).
   function fetchJsonRetry(url, timeoutMs) {
-    return fetchJson(url, timeoutMs).catch(function (err) {
+    return fetchJson(url, timeoutMs).catch(function () {
       return sleep(2000).then(function () { return fetchJson(url, timeoutMs); });
+    }).catch(function () {
+      return sleep(5000).then(function () { return fetchJson(url, timeoutMs); });
     });
   }
 
   function fetchTextRetry(url, timeoutMs) {
-    return fetchText(url, timeoutMs).then(function (r) {
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      return r.text;
-    }).catch(function (err) {
-      return sleep(2000).then(function () {
-        return fetchText(url, timeoutMs).then(function (r) {
-          if (!r.ok) throw new Error("HTTP " + r.status);
-          return r.text;
-        });
+    function once() {
+      return fetchText(url, timeoutMs).then(function (r) {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.text;
       });
+    }
+    return once().catch(function () {
+      return sleep(2000).then(once);
+    }).catch(function () {
+      return sleep(5000).then(once);
     });
   }
 
@@ -855,9 +879,18 @@ if (typeof module !== "undefined" && module.exports) {
     return fetchText(FEEDS.wwv).then(function (r) {
       if (!r.ok) throw new Error("HTTP " + r.status);
       var text = r.text;
-      var issued = text.match(/:Issued:\s*(.+)/);
-      state.wwvTime = issued ? new Date(issued[1].trim() + " UTC") : null;
-      if (state.wwvTime && isNaN(state.wwvTime.getTime())) state.wwvTime = null;
+      // :Issued: 2026 Nov 16 0005 UTC — parse it by hand, because the
+      // built-in Date parser drops the minutes from the bare HHMM form.
+      var issued = text.match(/:Issued:\s*(\d{4}) (\w{3}) (\d{1,2}) (\d{2})(\d{2}) UTC/);
+      if (issued) {
+        var months = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
+        var mi = months[issued[2]];
+        state.wwvTime = (mi !== undefined)
+          ? new Date(Date.UTC(parseInt(issued[1], 10), mi, parseInt(issued[3], 10), parseInt(issued[4], 10), parseInt(issued[5], 10)))
+          : null;
+      } else {
+        state.wwvTime = null;
+      }
       var m = text.match(/Solar flux (\d+) and estimated planetary A-index (\d+)/);
       if (!m) throw new Error("flux/A line not found");
       state.flux = parseInt(m[1], 10);
@@ -1103,7 +1136,7 @@ if (typeof module !== "undefined" && module.exports) {
   // ---- Gray line ---------------------------------------------------------
   function renderGrayLine() {
     var now = new Date();
-    var ss = sunriseSunset(now, OBS.lat, OBS.lon);
+    var ss = sunriseSunset(centralDayReference(now), OBS.lat, OBS.lon);
     if (ss.sunrise && ss.sunset) {
       el("gray-sun", "Sunrise <strong>" + fmtTime(ss.sunrise, CENTRAL) +
         " Central</strong>, sunset <strong>" + fmtTime(ss.sunset, CENTRAL) + " Central</strong> today.");
@@ -1176,7 +1209,7 @@ if (typeof module !== "undefined" && module.exports) {
     var results = {};
     var asofParts = [];
     function loadGroup(url, feedName, wantedNorads) {
-      return fetchTextRetry(url, 15000).then(function (text) {
+      return fetchTextRetry(url, 20000).then(function (text) {
         var tles = parseTles(text, wantedNorads);
         var foundAny = false;
         for (var i = 0; i < wantedNorads.length; i++) {
@@ -1194,7 +1227,23 @@ if (typeof module !== "undefined" && module.exports) {
         recordFeed(feedName, foundAny, now, foundAny ? "" : "satellite not in file");
         if (foundAny) asofParts.push(feedName + " current");
       }).catch(function () {
-        recordFeed(feedName, false, null, "feed unreachable");
+        // CelesTrak failed: fetch each satellite individually from the
+        // backup TLE API instead.
+        var jobs = wantedNorads.map(function (norad) {
+          return fetchJsonRetry(FEEDS.tleBackup + norad, 15000).then(function (d) {
+            if (!d || !d.line1 || !d.line2) throw new Error("bad TLE");
+            var satrec = satellite.twoline2satrec(d.line1, d.line2);
+            var pass = nextPass(satellite, satrec, now, OBS);
+            if (pass) results[norad] = { found: pass.found, pass: pass };
+            return true;
+          }).catch(function () { return false; });
+        });
+        return Promise.all(jobs).then(function (oks) {
+          var any = oks.indexOf(true) >= 0;
+          recordFeed(feedName, any, any ? now : null,
+            any ? "via backup TLE source" : "feed unreachable");
+          if (any) asofParts.push(feedName + " current (backup source)");
+        });
       });
     }
     var stationsIds = SATS.filter(function (s) { return s.group === "stations"; }).map(function (s) { return s.norad; });
@@ -1214,7 +1263,10 @@ if (typeof module !== "undefined" && module.exports) {
   function loadDxSpots() {
     return fetchJsonRetry(FEEDS.dxSpots, 15000).then(function (data) {
       if (!Array.isArray(data) || data.length === 0) throw new Error("empty feed");
-      var spots = data.slice(0, 10);
+      var spots = data.slice().sort(function (a, b) {
+        var ta = parseFeedTime(a.time), tb = parseFeedTime(b.time);
+        return (tb ? tb.getTime() : 0) - (ta ? ta.getTime() : 0);
+      }).slice(0, 10);
       var html = "";
       for (var i = 0; i < spots.length; i++) {
         var s = spots[i];
@@ -1242,7 +1294,11 @@ if (typeof module !== "undefined" && module.exports) {
   function loadPotaSpots() {
     return fetchJsonRetry(FEEDS.potaSpots, 15000).then(function (data) {
       if (!Array.isArray(data) || data.length === 0) throw new Error("empty feed");
-      var spots = data.slice(0, 8);
+      // The POTA API does not return spots newest-first, so sort here.
+      var spots = data.slice().sort(function (a, b) {
+        var ta = parseFeedTime(a.spotTime), tb = parseFeedTime(b.spotTime);
+        return (tb ? tb.getTime() : 0) - (ta ? ta.getTime() : 0);
+      }).slice(0, 8);
       var html = "";
       for (var i = 0; i < spots.length; i++) {
         var s = spots[i];
