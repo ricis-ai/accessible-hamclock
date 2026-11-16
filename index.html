@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark" />
+    <!-- Empty inline icon: stops the browser fetching /favicon.ico, which
+         lives outside the artifact's routes and 404s. -->
+    <link rel="icon" href="data:," />
+    <title>Accessible HamClock — Proof of Concept</title>
+    <style>
+      :root {
+        --bg: #000000;
+        --text: #ffffff;
+        --good: #00ff00;
+        --fair: #ffb300;
+        --poor: #ff6666;
+        --focus: #ffff00;
+        --panel: #0d0d0d;
+        --border: #ffffff;
+      }
+      * { box-sizing: border-box; }
+      html { font-size: 20px; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: Verdana, Geneva, "Segoe UI", Tahoma, sans-serif;
+        line-height: 1.5;
+        padding: 1rem;
+      }
+      .wrap { max-width: 44rem; margin: 0 auto; }
+
+      .skip-link {
+        position: absolute;
+        left: -9999px;
+        top: 0;
+        background: var(--focus);
+        color: #000;
+        font-weight: bold;
+        padding: 0.75rem 1rem;
+        z-index: 10;
+      }
+      .skip-link:focus { left: 0.5rem; top: 0.5rem; }
+
+      a { color: var(--fair); }
+      a:focus-visible, button:focus-visible {
+        outline: 4px solid var(--focus);
+        outline-offset: 3px;
+      }
+
+      h1 {
+        font-size: 2rem;
+        line-height: 1.2;
+        margin: 0.5rem 0 0.25rem;
+      }
+      h2 {
+        font-size: 1.5rem;
+        margin: 1.75rem 0 0.5rem;
+      }
+      p { margin: 0.5rem 0; }
+
+      .poc-note {
+        border: 3px solid var(--fair);
+        padding: 0.75rem 1rem;
+        font-size: 1.1rem;
+        font-weight: bold;
+        margin: 1rem 0;
+      }
+
+      .back-link {
+        display: block;
+        border: 3px solid var(--border);
+        background: var(--panel);
+        color: var(--text);
+        font-size: 1.25rem;
+        font-weight: bold;
+        text-align: center;
+        text-decoration: underline;
+        padding: 1rem;
+        margin: 1rem 0 0.5rem;
+        min-height: 3.5rem;
+      }
+      .back-link:hover { background: #1f1f1f; }
+
+      .reading {
+        border: 3px solid var(--border);
+        background: var(--panel);
+        padding: 1rem 1.25rem;
+        margin: 0.75rem 0;
+      }
+      .k-value {
+        font-size: 4.5rem;
+        font-weight: bold;
+        line-height: 1.1;
+        margin: 0.25rem 0;
+        color: var(--good);
+      }
+      .k-value.fair { color: var(--fair); }
+      .k-value.poor { color: var(--poor); }
+      .k-value.unknown { color: var(--text); font-size: 2.25rem; }
+      .k-label {
+        font-size: 1.35rem;
+        font-weight: bold;
+        margin: 0.25rem 0;
+      }
+      .k-detail { font-size: 1.1rem; }
+      .as-of { font-size: 1.15rem; }
+      .as-of strong { color: var(--good); }
+
+      button.refresh {
+        display: block;
+        width: 100%;
+        min-height: 3.5rem;
+        margin: 1.25rem 0 0.75rem;
+        padding: 0.9rem 1rem;
+        font: inherit;
+        font-size: 1.35rem;
+        font-weight: bold;
+        color: #000;
+        background: var(--good);
+        border: 3px solid var(--good);
+        cursor: pointer;
+      }
+      button.refresh:hover { background: #66ff66; }
+      button.refresh[disabled] { opacity: 0.6; cursor: wait; }
+
+      .status {
+        font-size: 1.2rem;
+        font-weight: bold;
+        min-height: 1.8em;
+        margin: 0.5rem 0;
+      }
+      .source { font-size: 1rem; margin-top: 1.5rem; }
+
+      .diag {
+        border: 3px solid var(--fair);
+        background: var(--panel);
+        padding: 1rem 1.25rem;
+        margin: 0.75rem 0;
+      }
+      .diag-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        font-size: 1.05rem;
+        overflow-wrap: anywhere;
+      }
+      .diag-list li {
+        padding: 0.45rem 0;
+        border-bottom: 1px solid #444;
+      }
+      .diag-list li:last-child { border-bottom: none; }
+      .diag-list .ok { color: var(--good); font-weight: bold; }
+      .diag-list .bad { color: var(--poor); font-weight: bold; }
+      .diag-list .info { color: var(--fair); font-weight: bold; }
+      .diag-log {
+        font-size: 1rem;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        margin: 0.5rem 0 0;
+        max-height: 24rem;
+        overflow-y: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <a class="skip-link" href="#k-reading">Skip to the K index reading</a>
+    <main class="wrap">
+      <h1>Accessible HamClock</h1>
+
+      <a class="back-link" href="https://www.facebook.com/groups/742838019382868">Back to Visually Inconvenienced Hams on Facebook</a>
+
+      <p class="poc-note">Proof of concept test page — instrumented build. This is not the finished HamClock. It tests one thing: whether this page, opened from a published link, can fetch live space-weather data in your browser. Every fetch step and the exact wording of any error are recorded in the Fetch diagnostics section below, so a failure can be read off the page instead of guessed at.</p>
+
+      <h2 id="k-reading">Planetary K index</h2>
+
+      <div class="reading" aria-labelledby="k-reading">
+        <p class="k-value unknown" id="k-value">Loading…</p>
+        <p class="k-label" id="k-label"></p>
+        <p class="k-detail" id="k-detail"></p>
+        <p class="as-of" id="as-of">Data as of: waiting for the first reading.</p>
+      </div>
+
+      <button type="button" class="refresh" id="refresh-btn">Refresh K index now</button>
+      <p class="status" id="status" role="status" aria-live="polite">Loading the latest K index…</p>
+
+      <p>The K index measures geomagnetic activity. 0 to 3 is quiet, 4 is unsettled, 5 and above is storm conditions, which usually means poor HF propagation.</p>
+
+      <h2 id="diag-heading">Fetch diagnostics</h2>
+      <p>One line per check, newest result at the top of the log. If the K index fails to load, read this section aloud or copy it — it says exactly which step failed and the browser's own error wording.</p>
+      <div class="diag" aria-labelledby="diag-heading">
+        <ul class="diag-list">
+          <li>Page origin: <span id="diag-origin">checking…</span></li>
+          <li>Browser online: <span id="diag-online">checking…</span></li>
+          <li>Attempt 1 — fetch(): <span id="diag-fetch">not run yet</span></li>
+          <li>Attempt 2 — XMLHttpRequest: <span id="diag-xhr">not run yet</span></li>
+          <li>Last error, exact wording: <span id="diag-error">none yet</span></li>
+        </ul>
+        <p class="diag-log" id="diag-log" role="log" aria-live="polite" aria-label="Fetch diagnostics log"></p>
+      </div>
+
+      <p class="source">Source: NOAA Space Weather Prediction Center, planetary K index 1-minute feed —
+        <a href="https://services.swpc.noaa.gov/json/planetary_k_index_1m.json">services.swpc.noaa.gov</a>.
+        Times on this page are 24-hour. The “data as of” time comes from the feed itself, not from your device clock.</p>
+    </main>
+
+    <script>
+      (function () {
+        var FEED_URL = "https://services.swpc.noaa.gov/json/planetary_k_index_1m.json";
+        var valueEl = document.getElementById("k-value");
+        var labelEl = document.getElementById("k-label");
+        var detailEl = document.getElementById("k-detail");
+        var asOfEl = document.getElementById("as-of");
+        var statusEl = document.getElementById("status");
+        var btn = document.getElementById("refresh-btn");
+        var diagOriginEl = document.getElementById("diag-origin");
+        var diagOnlineEl = document.getElementById("diag-online");
+        var diagFetchEl = document.getElementById("diag-fetch");
+        var diagXhrEl = document.getElementById("diag-xhr");
+        var diagErrorEl = document.getElementById("diag-error");
+        var diagLogEl = document.getElementById("diag-log");
+
+        function pad(n) { return (n < 10 ? "0" : "") + n; }
+
+        // Format a Date in a given IANA time zone as 24-hour HH:MM.
+        function fmtTime(date, tz) {
+          try {
+            var parts = new Intl.DateTimeFormat("en-GB", {
+              timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false
+            }).formatToParts(date);
+            var h = "00", m = "00";
+            for (var i = 0; i < parts.length; i++) {
+              if (parts[i].type === "hour") h = parts[i].value;
+              if (parts[i].type === "minute") m = parts[i].value;
+            }
+            if (h === "24") h = "00";
+            return h + ":" + m;
+          } catch (e) {
+            return pad(date.getUTCHours()) + ":" + pad(date.getUTCMinutes());
+          }
+        }
+
+        function fmtDate(date, tz) {
+          try {
+            return new Intl.DateTimeFormat("en-US", {
+              timeZone: tz, weekday: "long", year: "numeric", month: "long", day: "numeric"
+            }).format(date);
+          } catch (e) {
+            return date.toUTCString();
+          }
+        }
+
+        // ---- Diagnostics -------------------------------------------------
+        // Every fetch step appends a timestamped line to the on-page log and
+        // mirrors it to the console, so a failure on any device can be read
+        // off the page itself — no dev tools needed.
+        var attemptCount = 0;
+
+        function stamp() {
+          var now = new Date();
+          return fmtTime(now, "America/Chicago") + ":" + pad(now.getSeconds()) + " Central";
+        }
+
+        function logLine(text) {
+          var line = stamp() + " — " + text;
+          diagLogEl.textContent = line + "\n" + diagLogEl.textContent;
+          if (window.console && console.log) console.log("[hamclock-diag] " + line);
+        }
+
+        function describeError(err) {
+          if (!err) return "unknown error (no error object)";
+          var name = err.name || "Error";
+          var msg = err.message || String(err);
+          return name + ": " + msg;
+        }
+
+        function recordError(where, err) {
+          var text = describeError(err);
+          diagErrorEl.textContent = where + " — " + text;
+          diagErrorEl.className = "bad";
+          logLine("FAILED at " + where + " — " + text);
+          return text;
+        }
+
+        function setResult(el, ok, text) {
+          el.textContent = text;
+          el.className = ok === true ? "ok" : (ok === false ? "bad" : "info");
+        }
+
+        function handleData(data, via) {
+          if (!Array.isArray(data) || data.length === 0) {
+            logLine(via + " returned JSON, but it was not a non-empty list of readings.");
+            showNotReported("K index not available — the feed returned no readings.");
+            return false;
+          }
+          var last = data[data.length - 1];
+          if (!last || typeof last.kp_index !== "number" || !last.time_tag) {
+            logLine(via + " returned " + data.length + " entries, but the latest entry was incomplete (kp_index/time_tag missing).");
+            showNotReported("K index not available — the latest feed entry was incomplete.");
+            return false;
+          }
+          logLine(via + " OK — " + data.length + " entries; latest K " + last.kp_index + " at feed time " + last.time_tag + " UTC.");
+          showReading(last);
+          return true;
+        }
+
+        function showNotReported(announceText) {
+          valueEl.textContent = "K index not reported";
+          valueEl.className = "k-value unknown";
+          labelEl.textContent = "";
+          detailEl.textContent = "";
+          asOfEl.textContent = "Data as of: not reported — the feed returned no usable reading.";
+          statusEl.textContent = announceText;
+        }
+
+        function showReading(entry) {
+          var kp = entry.kp_index;
+          var est = (typeof entry.estimated_kp === "number") ? entry.estimated_kp : null;
+          // time_tag from the feed is UTC with no zone suffix; treat it as UTC.
+          var when = new Date(entry.time_tag + "Z");
+          var validTime = !isNaN(when.getTime());
+
+          valueEl.textContent = "K " + kp;
+          var cls = "k-value", word;
+          if (kp >= 5) { cls += " poor"; word = "POOR — geomagnetic storm"; }
+          else if (kp === 4) { cls += " fair"; word = "FAIR — unsettled"; }
+          else { cls += ""; word = "GOOD — quiet"; }
+          valueEl.className = cls;
+          labelEl.textContent = word;
+
+          detailEl.textContent = est !== null
+            ? "Estimated K for this minute: " + est.toFixed(2) + "."
+            : "";
+
+          if (validTime) {
+            asOfEl.innerHTML = "";
+            var strong = document.createElement("strong");
+            strong.textContent = fmtTime(when, "America/Chicago") + " Central / " +
+              fmtTime(when, "UTC") + " UTC";
+            asOfEl.appendChild(document.createTextNode("Data as of "));
+            asOfEl.appendChild(strong);
+            asOfEl.appendChild(document.createTextNode(", " + fmtDate(when, "America/Chicago") + " (feed time)."));
+          } else {
+            asOfEl.textContent = "Data as of: the feed gave a reading with no usable time.";
+          }
+
+          var now = new Date();
+          statusEl.textContent = "Refreshed " + fmtTime(now, "America/Chicago") +
+            " Central, K index current — K " + kp + ", " + word.split(" — ")[1] + ".";
+        }
+
+        // Attempt 2: same feed via XMLHttpRequest. If fetch() fails but XHR
+        // succeeds, the block is specific to fetch(); if both fail the same
+        // way, the block sits below both — hosting policy or network egress.
+        function tryXhr(startedAt) {
+          setResult(diagXhrEl, null, "running…");
+          logLine("Attempt 2 (XMLHttpRequest) started.");
+          var xhr = new XMLHttpRequest();
+          xhr.open("GET", FEED_URL, true);
+          xhr.onreadystatechange = function () {
+            if (xhr.readyState !== 4) return;
+            var ms = Date.now() - startedAt;
+            if (xhr.status >= 200 && xhr.status < 300) {
+              setResult(diagXhrEl, true, "HTTP " + xhr.status + " in " + ms + " ms — response received");
+              logLine("Attempt 2 got HTTP " + xhr.status + " in " + ms + " ms; parsing JSON (" + xhr.responseText.length + " characters).");
+              var data;
+              try {
+                data = JSON.parse(xhr.responseText);
+              } catch (e) {
+                recordError("Attempt 2 JSON parse", e);
+                setResult(diagXhrEl, false, "HTTP " + xhr.status + " but the body was not valid JSON");
+                finish(false);
+                return;
+              }
+              finish(handleData(data, "Attempt 2 (XMLHttpRequest)"));
+            } else {
+              var detail = "HTTP status " + xhr.status + " in " + ms + " ms (status 0 means the request never reached the server — blocked before or during the connection)";
+              setResult(diagXhrEl, false, detail);
+              diagErrorEl.textContent = "Attempt 2 (XMLHttpRequest) — " + detail;
+              diagErrorEl.className = "bad";
+              logLine("FAILED at Attempt 2 — " + detail + ".");
+              finish(false);
+            }
+          };
+          xhr.onerror = function () {
+            var ms = Date.now() - startedAt;
+            var detail = "network error event after " + ms + " ms, HTTP status " + xhr.status;
+            setResult(diagXhrEl, false, detail);
+            diagErrorEl.textContent = "Attempt 2 (XMLHttpRequest) — " + detail;
+            diagErrorEl.className = "bad";
+            logLine("FAILED at Attempt 2 — " + detail + ".");
+            finish(false);
+          };
+          xhr.send(null);
+        }
+
+        function finish(ok) {
+          btn.disabled = false;
+          if (!ok) {
+            showNotReported("K index not available — both fetch methods failed. The exact errors are in the Fetch diagnostics section below. Check your connection and press Refresh to try again.");
+          }
+          logLine("Refresh cycle finished: " + (ok ? "K index loaded." : "no reading loaded — see errors above."));
+        }
+
+        function load() {
+          attemptCount++;
+          btn.disabled = true;
+          statusEl.textContent = "Refreshing…";
+          diagOnlineEl.textContent = navigator.onLine ? "yes" : "no — the browser reports it is offline";
+          diagOnlineEl.className = navigator.onLine ? "ok" : "bad";
+          logLine("Refresh #" + attemptCount + " started. Browser online: " + (navigator.onLine ? "yes" : "no") + ". Requesting " + FEED_URL);
+          setResult(diagFetchEl, null, "running…");
+          var startedAt = Date.now();
+          fetch(FEED_URL, { cache: "no-store" })
+            .then(function (res) {
+              var ms = Date.now() - startedAt;
+              logLine("Attempt 1 (fetch) got a response in " + ms + " ms — HTTP " + res.status + " " + (res.statusText || "") + ", response type \"" + res.type + "\" (\"opaque\" would mean the response was blocked by CORS).");
+              if (!res.ok) {
+                setResult(diagFetchEl, false, "HTTP " + res.status + " " + (res.statusText || "") + " in " + ms + " ms");
+                recordError("Attempt 1 HTTP response", new Error("HTTP " + res.status + " " + (res.statusText || "")));
+                throw new Error("http-not-ok");
+              }
+              setResult(diagFetchEl, true, "HTTP " + res.status + " in " + ms + " ms — now reading the JSON body");
+              return res.json().then(function (data) {
+                setResult(diagFetchEl, true, "HTTP " + res.status + " in " + ms + " ms — JSON body read OK");
+                return data;
+              }, function (err) {
+                recordError("Attempt 1 JSON parse", err);
+                throw err;
+              });
+            })
+            .then(function (data) {
+              if (handleData(data, "Attempt 1 (fetch)")) {
+                setResult(diagXhrEl, null, "not needed — fetch() succeeded");
+                finish(true);
+              } else {
+                tryXhr(Date.now());
+              }
+            })
+            .catch(function (err) {
+              if (err && err.message === "http-not-ok") {
+                // Already logged above; still cross-check with XHR.
+              } else {
+                setResult(diagFetchEl, false, "failed — " + describeError(err));
+                recordError("Attempt 1 (fetch)", err);
+              }
+              logLine("Falling back to Attempt 2 (XMLHttpRequest) to cross-check.");
+              tryXhr(Date.now());
+            });
+        }
+
+        // Page-level facts, filled in once at load.
+        var originText;
+        try {
+          originText = window.location.origin || (window.location.protocol + "//" + window.location.host);
+        } catch (e) {
+          originText = "unreadable (" + describeError(e) + ")";
+        }
+        if (!originText || originText === "null") {
+          originText = String(originText) + " — an opaque origin; cross-origin fetches from opaque origins are commonly blocked";
+        }
+        diagOriginEl.textContent = originText + " (protocol: " + window.location.protocol + ")";
+        logLine("Page loaded. Origin: " + originText + ". User agent: " + navigator.userAgent);
+
+        btn.addEventListener("click", load);
+        load();
+      })();
+    </script>
+  </body>
+</html>
