@@ -1386,6 +1386,35 @@ if (typeof module !== "undefined" && module.exports) {
 
   var refreshBtn = $("refresh-btn");
   if (refreshBtn) refreshBtn.addEventListener("click", function () { refreshAll(true); });
+
+  // ---- Back-to-group links ---------------------------------------------------
+  // Facebook's in-app browser cannot open facebook.com group pages at all:
+  // both the www and m addresses end at Facebook's "Page not found"
+  // (verified on Gregory's phone 2026-11-15, fresh load). The native app
+  // deep link fb://group/<id> is the route that works there. On mobile, try
+  // the deep link first and fall back to the plain web address if the app
+  // does not open; on desktop the web address works fine, so the link
+  // behaves normally. Without JavaScript the links are plain web addresses.
+  var GROUP_DEEP_LINK = "fb://group/742838019382868";
+  var isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (isMobile) {
+    var groupLinks = document.querySelectorAll('a[href*="facebook.com/groups/742838019382868"]');
+    for (var gi = 0; gi < groupLinks.length; gi++) {
+      groupLinks[gi].addEventListener("click", function (event) {
+        event.preventDefault();
+        var fallbackUrl = this.href;
+        var attemptedAt = Date.now();
+        window.location.href = GROUP_DEEP_LINK;
+        setTimeout(function () {
+          // If the Facebook app opened, this page is hidden or gone; only
+          // fall back when we are still here and visible.
+          if (!document.hidden && Date.now() - attemptedAt < 5000) {
+            window.location.href = fallbackUrl;
+          }
+        }, 1500);
+      });
+    }
+  }
 })();
 
 </script>
